@@ -20,110 +20,166 @@
 
 -export([new/1,
 	 new/2,
-	 sync/1,
+         sync/2,
 	 update/2,
 	 update/3,
+	 update/4,
 	 values/1,
 	 join/1,
-	 reconcile/2]).
+	 causal_consistent/4,
+	 compare_causality/2,
+	 is_valid/1,
+	 sort_vv/1,
+	 merge_default/3]).
 
 -include("erlang_crdt.hrl").
 
--spec new(V :: list() | term()) -> #ec_dvv{}.
+-spec new(V :: term()) -> #ec_dvv{}.
 new(V) when is_list(V) ->
     #ec_dvv{annonymus_list=V};
 new(V) ->
     new([V]).
 
--spec new(DL :: list(), V :: list() | term()) -> #ec_dvv{}.
+-spec new(DL :: list() | undefined, V :: term()) -> #ec_dvv{}.
+new(undefined, V) ->
+    new(V);
 new(DL, V) when is_list(V) ->
-    #ec_dvv{dot_list=sort_vv(DL), annonymus_list=V};
+    #ec_dvv{dot_list=sort_vv(normalized_dot_list(DL)), annonymus_list=V};
 new(DL, V) ->
     new(DL, [V]).
 
--spec sync(Clocks :: list()) -> #ec_dvv{}.
-sync(Clocks) ->   
-    lists:foldl(fun sync/2, #ec_dvv{}, Clocks).
+-spec sync(Clocks :: list(), MergeFun :: {fun(), fun()}) -> #ec_dvv{}.
+sync(Clocks, MergeFun) ->
+    sync1(Clocks, MergeFun, ?EC_MERGE_DVV).
 
--spec update(Clock :: #ec_dvv{}, Id :: atom()) -> #ec_dvv{}.
-update(#ec_dvv{dot_list=DL, annonymus_list=[V]}, Id) ->    
-    #ec_dvv{dot_list=dot(DL, Id, V)}.
+-spec update(Clock :: #ec_dvv{}, Id :: term()) -> #ec_dvv{}.
+update(#ec_dvv{dot_list=DL, annonymus_list=[V]}, Id) ->
+    #ec_dvv{dot_list=dot(DL, Id, V, {fun merge_default/3, fun merge_default/3})}.
 
--spec update(UClock :: #ec_dvv{}, LClock :: #ec_dvv{}, Id :: atom()) -> #ec_dvv{}.
-update(#ec_dvv{annonymus_list=[UV]}=UClock, LClock, Id) ->
-    #ec_dvv{dot_list=DL, annonymus_list=AL} = sync(UClock#ec_dvv{annonymus_list=[]}, LClock),
-    #ec_dvv{dot_list=dot(DL, Id, UV), annonymus_list=AL}.
+-spec update(UClock :: #ec_dvv{}, LClock :: #ec_dvv{} | undefined, Id :: term()) -> #ec_dvv{}.
+update(UClock, LClock, Id) ->
+    update(UClock, LClock, {fun merge_default/3, fun merge_default/3}, Id).
 
--spec values(Clock :: #ec_dvv{}) -> list().
+-spec update(UClock :: #ec_dvv{}, LClock :: #ec_dvv{} | undefined, UpdateFun :: {fun(), fun()}, Id :: term()) -> #ec_dvv{}.
+update(UClock, undefined, _UpdateFun, Id) ->
+    update(UClock, Id);
+update(#ec_dvv{annonymus_list=[UV]}=UClock, LClock, UpdateFun, Id) ->
+    {#ec_dvv{dot_list=DL, annonymus_list=AL}, _, ?EC_MERGE_DVV} = sync2(UClock#ec_dvv{annonymus_list=[]}, {LClock, UpdateFun, ?EC_MERGE_DVV}),
+    #ec_dvv{dot_list=dot(DL, Id, UV, UpdateFun), annonymus_list=AL}.
+
+-spec values(Clock :: #ec_dvv{} | undefined) -> list() | undefined.
+values(undefined) ->
+    undefined;
 values(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
     lists:foldl(fun(#ec_dot{values=Vs}, Acc) -> Acc ++ Vs end, AL, DL).
 
--spec join(Clock :: #ec_dvv{}) -> list().
+-spec join(Clock :: #ec_dvv{} | undefined) -> list() | undefined.
+join(undefined) ->
+    undefined;
 join(#ec_dvv{dot_list=DL}) ->
     lists:foldl(fun(Dot, Acc) -> [Dot#ec_dot{values=[]} | Acc] end, [], DL).
 
--spec reconcile(F :: fun((#ec_dvv{}) -> #ec_dvv{}), C :: #ec_dvv{}) -> #ec_dvv{}.
-reconcile(F, C) ->
-    F(C).
+-spec causal_consistent(Clock1 :: #ec_dvv{} | undefined, 
+			Clock2 :: #ec_dvv{} | undefined, 
+			OffSet :: non_neg_integer(), 
+			ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | ?EC_CAUSALLY_BEHIND | ?EC_CAUSALLY_AHEAD.
+causal_consistent(undefined, undefined, _Offset, _ServerId) ->
+    ?EC_CAUSALLY_CONSISTENT;
+causal_consistent(undefined, #ec_dvv{}, _Offset, _ServerId) ->
+    ?EC_CAUSALLY_BEHIND;
+causal_consistent(#ec_dvv{}, undefined, _Offset, _ServerId) ->
+    ?EC_CAUSALLY_AHEAD;
+causal_consistent(#ec_dvv{dot_list=DDL}, #ec_dvv{dot_list=SDL}, Offset, ServerId) ->
+    case {lists:keyfind(ServerId, #ec_dot.replica_id, DDL), lists:keyfind(ServerId, #ec_dot.replica_id, SDL)} of
+	{false, _}                                                               ->
+	    ?EC_CAUSALLY_CONSISTENT;
+	{#ec_dot{counter_min=1}, false}                                          ->
+	    ?EC_CAUSALLY_CONSISTENT;
+	{#ec_dot{}, false}                                                       ->
+	    ?EC_CAUSALLY_AHEAD;
+	{#ec_dot{counter_max=Max1, counter_min=Min1}, #ec_dot{counter_max=Max2}} ->
+	    case (Max2 >= Min1) of
+		true  ->
+		    case (Max2 =< (Max1-Offset)) of
+			true  ->
+			    ?EC_CAUSALLY_CONSISTENT;
+			false ->
+			    ?EC_CAUSALLY_BEHIND
+	            end;
+		false  ->
+		    ?EC_CAUSALLY_AHEAD
+	    end
+    end.
+
+-spec compare_causality(Clock1 :: #ec_dvv{}, Clock2 :: #ec_dvv{}) -> ?EC_EQUAL | ?EC_MORE | ?EC_LESS | ?EC_CONCURRENT.
+compare_causality(#ec_dvv{dot_list=DL1}, #ec_dvv{dot_list=DL2}) ->
+    compare_causality(sort_vv(DL1), sort_vv(DL2), ?EC_EQUAL).
+
+-spec is_valid(Clock :: #ec_dvv{} | undefined) -> true | false.
+is_valid(undefined) ->
+    false;
+is_valid(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
+    lists:foldl(fun(#ec_dot{values=VS}, Flag) -> Flag orelse length(VS) > 0 end, length(AL) > 0, DL).
+
+-spec sort_vv(VV :: list()) -> list().
+sort_vv(VV) ->			    
+    lists:keysort(#ec_dot.replica_id, VV).
+
+-spec merge_default(Value1 :: term(), Value2 ::term(), DefaultValue ::term()) -> term().
+merge_default(_Value1, _Value2, DefaultValue) ->    
+    DefaultValue.
 
 %% private function
 
--spec dot(DL :: list(), Id :: atom(), V :: term()) -> list().
-dot(DL, Id, V) ->
-    dot(sort_vv(DL), Id, V, true, []).
+-spec normalized_dot_list(DotList :: list()) ->list().
+normalized_dot_list(DotList) ->
+    lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max} | Acc] end, [], DotList).
+			
+-spec dot(DL :: list(), Id :: atom(), V :: term(), UpdateFun :: {fun(), fun()}) -> list().
+dot(DL, Id, V, UpdateFun) ->
+    dot(sort_vv(DL), Id, V, UpdateFun, true, []).
 
--spec dot(DL :: list(), Id :: atom(), V :: term(), InsertFlag :: true | false, Acc :: list()) -> list().
-dot([#ec_dot{replica_id=Id, counter=Counter, values=Values} | T], Id, V, true, Acc) ->
-    dot(T, Id, V, false, [#ec_dot{replica_id=Id, counter=Counter+1, values=[V | Values]} | Acc]);
-dot([#ec_dot{replica_id=Id1} | _T]=DL, Id, V, true, Acc) when Id1 > Id ->
-    dot(DL, Id, V, false, [#ec_dot{replica_id=Id, counter=1, values=[V]} | Acc]); 
-dot([H | T], Id, V, InsertFlag, Acc) ->
-    dot(T, Id, V, InsertFlag, [H | Acc]);
-dot([], Id, V, true, Acc) ->
-    lists:reverse([#ec_dot{replica_id=Id, counter=1, values=[V]} | Acc]);
-dot([], _Id, _V, false, Acc) ->
+-spec dot(DL :: list(), Id :: atom(), V :: term(), UpdateFun :: {fun(), fun()}, InsertFlag :: true | false, Acc :: list()) -> list().
+dot([#ec_dot{replica_id=Id, counter_max=Max, counter_min=Min, values=Values} | T], Id, V, {AFun, _}=UpdateFun,  true, Acc) ->
+    Values1 = AFun([V], Values, [V | Values]),
+    dot(T, Id, V, UpdateFun, false, [#ec_dot{replica_id=Id, counter_max=Max+1, counter_min=Min, values=Values1} | Acc]);
+dot([#ec_dot{replica_id=Id1} | _T]=DL, Id, V, UpdateFun, true, Acc) when Id1 > Id ->
+    dot(DL, Id, V, UpdateFun, false, [#ec_dot{replica_id=Id, counter_max=1, counter_min=1, values=[V]} | Acc]); 
+dot([H | T], Id, V, UpdateFun, InsertFlag, Acc) ->
+    dot(T, Id, V, UpdateFun, InsertFlag, [H | Acc]);
+dot([], Id, V, _UpdateFun, true, Acc) ->
+    lists:reverse([#ec_dot{replica_id=Id, counter_max=1, counter_min=1, values=[V]} | Acc]);
+dot([], _Id, _V, _UpdateFun, false, Acc) ->
     lists:reverse(Acc).
 
--spec sort_vv(VV :: list()) -> list().
-sort_vv(VV) ->
-    lists:keysort(2, VV).
-
--spec merge(Dot1 :: #ec_dot{}, Dot2 :: #ec_dot{}) -> #ec_dot{}.
-merge(#ec_dot{replica_id=Id, counter=C1, values=V1}=Dot1, 
-      #ec_dot{replica_id=Id, counter=C2, values=V2}=Dot2) ->
-    case C1 >= C2 of
+-spec merge(Dot1 :: #ec_dot{}, Dot2 :: #ec_dot{}, MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV) -> #ec_dot{}.
+merge(#ec_dot{replica_id=Id, counter_max=Max1, counter_min=Min1, values=V1}=Dot1, 
+      #ec_dot{replica_id=Id, counter_max=Max2, counter_min=Min2, values=V2}=Dot2,
+      {AddFun, MergeFun},
+      ?EC_MERGE_DVV) ->
+    case Max1 >= Max2 of
 	true  ->
-	    Dot1#ec_dot{values=lists:sublist(V1, C1-C2+length(V2))};
+	    V3 = lists:sublist(V1, Max1-Max2+length(V2)),
+	    V4 = case Min1 >= Max2 of
+		     true  ->
+			 AddFun(V1, V2, V3);
+		     false ->
+			 MergeFun(V1, V2, V3)
+		 end, 
+	    Dot1#ec_dot{counter_min=min(Min1, Min2), values=V4};
 	false ->
-	    Dot2#ec_dot{values=lists:sublist(V2, C2-C1+length(V1))}
+	    V3 = lists:sublist(V2, Max2-Max1+length(V1)),
+	    V4 = case Min2 >= Max1 of
+		     true  ->
+			 AddFun(V1, V2, V3);
+		     false ->
+			 MergeFun(V1, V2, V3)
+		 end,
+	    Dot2#ec_dot{counter_min=min(Min1, Min2), values=V4}
     end.
 
--spec sync2(DL1 :: list(), DL2 :: list()) -> list().
-sync2(DL1, DL2) ->
-    sync2(DL1, DL2, []).
-
--spec sync2(DL1 :: list(), DL2 :: list(), Acc :: list()) -> list().
-sync2([#ec_dot{replica_id=Id1}=H1 | T1]=DL1, [#ec_dot{replica_id=Id2}=H2 | T2]=DL2, Acc) ->
-    case Id1 =:= Id2 of
-	true  ->
-	    sync2(T1, T2, [merge(H1, H2) | Acc]);
-	false ->
-	    case Id1 < Id2 of
-		true  ->
-		    sync2(T1, DL2, [H1 | Acc]);
-		false ->
-		    sync2(DL1, T2, [H2 | Acc])
-	    end
-    end;
-sync2([], [H | T], Acc) ->
-    sync2([], T, [H | Acc]);
-sync2([H | T], [], Acc) ->
-    sync2(T, [], [H | Acc]);
-sync2([], [], Acc) ->
-    lists:reverse(Acc).
-
 -spec compare_causality(DL1 :: list(), DL2 :: list(), Flag :: ?EC_EQUAL | ?EC_LESS | ?EC_MORE | ?EC_CONCURRENT) -> ?EC_EQUAL | ?EC_LESS | ?EC_MORE | ?EC_CONCURRENT.
-compare_causality([#ec_dot{replica_id=Id, counter=C1} | T1], [#ec_dot{replica_id=Id, counter=C2} | T2], Flag) ->
+compare_causality([#ec_dot{replica_id=Id, counter_max=C1} | T1], [#ec_dot{replica_id=Id, counter_max=C2} | T2], Flag) ->
     case C1 =:= C2 of
 	true  ->
 	    compare_causality(T1, T2, Flag);
@@ -158,12 +214,21 @@ compare_causality([_H | _T], [], _Flag) ->
 compare_causality([], [], Flag) -> 
     Flag.
 
--spec sync(Clock1 :: #ec_dvv{}, Clock2 :: #ec_dvv{}) -> #ec_dvv{}.
-sync(#ec_dvv{dot_list=[], annonymus_list=[]}, Clock2) ->
-    Clock2;
-sync(Clock1, #ec_dvv{dot_list=[], annonymus_list=[]}) ->
-    Clock1;
-sync(#ec_dvv{dot_list=DL1, annonymus_list=AL1}, #ec_dvv{dot_list=DL2, annonymus_list=AL2}) ->
+-spec sync1(Clocks :: list(), MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV) -> #ec_dvv{}.
+sync1(Clocks, MergeFun, Flag) ->     
+    {DVV, MergeFun, Flag} = lists:foldl(fun sync2/2, {#ec_dvv{}, MergeFun, Flag}, Clocks),
+    DVV.
+
+-spec sync2(Clock1 :: #ec_dvv{}, {Clock2 :: #ec_dvv{}, MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV}) -> #ec_dvv{}.
+sync2(undefined, {Clock2, MergeFun, Flag}) ->
+    {Clock2, MergeFun, Flag};
+sync2(Clock1, {undefined, MergeFun, Flag}) ->
+    {Clock1, MergeFun, Flag};
+sync2(#ec_dvv{dot_list=[], annonymus_list=[]}, {Clock2, MergeFun, Flag}) ->
+    {Clock2, MergeFun, Flag};
+sync2(Clock1, {#ec_dvv{dot_list=[], annonymus_list=[]}, MergeFun, Flag}) ->
+    {Clock1, MergeFun, Flag};
+sync2(#ec_dvv{dot_list=DL1, annonymus_list=AL1}, {#ec_dvv{dot_list=DL2, annonymus_list=AL2}, MergeFun, Flag}) ->
     DLS1 = sort_vv(DL1),
     DLS2 = sort_vv(DL2),
     AL = case compare_causality(DLS1, DLS2, ?EC_EQUAL) of
@@ -174,4 +239,33 @@ sync(#ec_dvv{dot_list=DL1, annonymus_list=AL1}, #ec_dvv{dot_list=DL2, annonymus_
 	     _        ->
 		 sets:to_list(sets:from_list(AL1++AL2))
 	 end,
-    #ec_dvv{dot_list=sync2(DLS1, DLS2), annonymus_list=AL}.
+    {#ec_dvv{dot_list=sync3(DLS1, DLS2, MergeFun, Flag), annonymus_list=AL}, MergeFun, Flag}.
+
+-spec sync3(DL1 :: list(), DL2 :: list(), MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV) -> list().
+sync3(DL1, DL2, MergeFun, Flag) ->    
+    sync4(DL1, DL2, MergeFun, Flag, []).
+
+-spec sync4(DL1 :: list(), DL2 :: list(), MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV, Acc :: list()) -> list().
+sync4([#ec_dot{replica_id=Id1}=H1 | T1]=DL1, [#ec_dot{replica_id=Id2}=H2 | T2]=DL2, MergeFun, Flag, Acc) ->
+    case Id1 =:= Id2 of
+        true  ->
+            sync4(T1, T2, MergeFun, Flag, [merge(H1, H2, MergeFun, Flag) | Acc]);
+	false ->            
+	    case {Id1, Id2, Id1 < Id2} of
+                {undefined, _, _} ->
+                    sync4(T1, DL2, MergeFun, Flag, Acc);
+                {_, undefined, _} ->
+                    sync4(DL1, T2, MergeFun, Flag, Acc);
+                {_, _, true}      ->
+                    sync4(T1, DL2, MergeFun, Flag, [H1 | Acc]);
+                {_, _, false}     ->
+                    sync4(DL1, T2, MergeFun, Flag, [H2 | Acc])
+            end
+    end;
+sync4([], [H | T], MergeFun, Flag, Acc) ->
+    sync4([], T, MergeFun, Flag, [H | Acc]);
+sync4([H | T], [], MergeFun, Flag, Acc) ->
+    sync4(T, [], MergeFun, Flag, [H | Acc]);
+sync4([], [], _MergeFun, _Flag, Acc) ->
+    lists:reverse(Acc).
+

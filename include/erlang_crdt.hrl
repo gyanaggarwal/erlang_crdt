@@ -16,15 +16,47 @@
 %% under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--define(EC_LESS,           ec_less).
--define(EC_EQUAL,          ec_equal).
--define(EC_MORE,           ec_more).
--define(EC_CONCURRENT,     ec_concurrent).
+-define(EC_LESS,                      ec_less).
+-define(EC_EQUAL,                     ec_equal).
+-define(EC_MORE,                      ec_more).
+-define(EC_CONCURRENT,                ec_concurrent).
 
--record(ec_dot,            {replica_id             :: atom(),
-			    counter=0              :: non_neg_integer(),
+-define(EC_ADD_DVV,                   ec_add_dvv).
+-define(EC_MERGE_DVV,                 ec_merge_dvv).
+
+-define(EC_RESET_NONE,                ec_reset_none).
+-define(EC_RESET_VALUES,              ec_reset_values).
+-define(EC_RESET_ANNONYMUS_LIST,      ec_reset_annonymus_list).
+-define(EC_RESET_ALL,                 ec_reset_all).
+-define(EC_RESET_VALUES_ONLY,         ec_reset_values_only).
+-define(EC_RESET_RETAIN_ALL,          ec_reset_retain_all).
+
+-define(EC_MVREGISTER,                ec_mvregister).
+-define(EC_GCOUNTER,                  ec_gcounter).
+-define(EC_PNCOUNTER,                 ec_pncounter).
+-define(EC_AWORSET,                   ec_aworset).
+-define(EC_RWORSET,                   ec_rworset).
+-define(EC_EWFLAG,                    ec_ewflag).
+-define(EC_DWFLAG,                    ec_dwflag).
+
+-define(EC_CAUSALLY_CONSISTENT,       causally_consistent).
+-define(EC_CAUSALLY_BEHIND,           causally_behind).
+-define(EC_CAUSALLY_AHEAD,            causally_ahead).
+
+-define(EC_INVALID_OPERATION,         invalid_operation).
+-define(EC_DOT_DOES_NOT_EXIST,        dot_does_not_exist).           
+
+-define(EC_INCORRECT_DELTA_INTERVAL,  incorrect_delta_interval).
+-define(EC_EMPTY_DELTA_INTERVAL,      empty_delta_interval).
+
+-record(ec_dot,            {replica_id=undefined   :: term() | undefined,
+			    counter_max=0          :: non_neg_integer(),
+			    counter_min=0          :: non_neg_integer(),
 			    values=[]              :: list()}).
 
--record(ec_dvv,            {dot_list=[]            :: list(),
+-record(ec_dvv,            {module                 :: atom(),
+			    type                   :: atom(),
+			    option                 :: term(),
+			    dot_list=[]            :: list(),
 			    annonymus_list=[]      :: list()}).
 
