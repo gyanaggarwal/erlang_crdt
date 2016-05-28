@@ -22,7 +22,7 @@
 
 -export([new_crdt/2,
 	 delta_crdt/4,
-	 reconcile_crdt/2,
+	 reconcile_crdt/3,
 	 update_fun_crdt/1,
 	 merge_fun_crdt/1,
 	 query_crdt/2,
@@ -33,58 +33,60 @@
 
 -spec new_crdt(Type :: atom(), Args :: term()) -> #ec_dvv{}.
 new_crdt(Type, Args) ->
-    #ec_dvv{module=?MODULE, type=Type, option=Args, annonymus_list=[{sets:new(), sets:new(), sets:new()}]}. 
+    #ec_dvv{module=?MODULE, type=Type, option=Args, annonymus_list=[new_annonymus_value()]}. 
 
 -spec delta_crdt(Ops :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 delta_crdt(Ops, DL, #ec_dvv{module=?MODULE}=State, ServerId) ->
     case new_value(Ops, State, ServerId) of
-	{undefined, undefined, undefined} ->
+	{_, {undefined, undefined, undefined}} ->
 	    ec_crdt_util:add_param(#ec_dvv{}, State);
-	Value                             ->
+	Value                                  ->
 	    ec_crdt_util:new_delta(Value, DL, State, ServerId)
     end.
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
-reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=AL}=State, ServerId) ->
-    {AL8, AL9} = case {ec_crdt_util:find_dot(State, ServerId), AL} of
-		     {false, [E1]}                  ->
-			 {[E1], undefined};
-		     {false, [E1, E2]}              ->
-			 {[E1], [E2]};
-		     {#ec_dot{values=[]}, [E1]}      ->
-			 {[E1], undefined};
-		     {#ec_dot{values=[]}, [E1, E2]} ->
-			 {[E1], [E2]};
-		     {#ec_dot{values=[E1]}, [E2]}   ->
-			 {[E1], [E2]}
-                 end,
-		
-    State1 = ec_crdt_util:reset(State, ?EC_RESET_VALUES_ONLY),
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_RECONCILE_LOCAL | ?EC_RECONCILE_GLOBAL) -> #ec_dvv{}.
+reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[AD1]}=State, ServerId, ?EC_RECONCILE_LOCAL) ->
+    Dot1 = ec_crdt_util:find_dot(State, ServerId),
+    {Tag, V9} = case Dot1#ec_dot.values of
+		    [V1]     ->
+			{?EC_RECONCILE, V1};
+		    [V1, V2] ->
+			reconcile_local(V1, V2, Type)
+		end,
+    AD9 = case {{Tag, V9}, Type} of
+	      {{?EC_RECONCILED, _D}, _}                ->
+		  AD1;
+	      {{?EC_RECONCILE, {_, AL1}}, ?EC_AWORSET} ->
+		  add_win(AL1, AD1);
+	      {{?EC_RECONCILE, {_, AL1}}, ?EC_RWORSET} ->
+		  rmv_win(AL1, AD1)
+	  end,
+    Dot9 = Dot1#ec_dot{values=[V9]},
+    DL9 = ec_dvv:replace_dot_list(DL1, Dot9),
+    State#ec_dvv{dot_list=DL9, annonymus_list=[AD9]};
+reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_RECONCILE_GLOBAL) ->			     
+    D3 = case Type of
+	     ?EC_AWORSET ->
+		 add_win(D1, D2);
+	     ?EC_RWORSET ->
+		 rmv_win(D1, D2)
+	 end,
+    State#ec_dvv{annonymus_list=[D3]};
+reconcile_crdt(State, _ServerId, ?EC_RECONCILE_GLOBAL) ->
+    State.
 
-    NewAL = case {AL8, AL9} of
-		{_, undefined}         ->
-		    AL8;
-		{_, _}                 ->
-		    case Type of
-			?EC_AWORSET ->
-			    add_win(AL8, AL9);
-			?EC_RWORSET ->
-			    rmv_win(AL8, AL9)
-		    end
-	    end,
-    State1#ec_dvv{annonymus_list=NewAL}.
-			     
--spec update_fun_crdt(Args :: list()) -> fun().
+-spec update_fun_crdt(Args :: list()) -> {fun(), fun()}.
 update_fun_crdt([_Type]) -> 
-    fun ec_dvv:merge_default/3.
+    {fun ec_dvv:merge_default/3, fun ec_dvv:merge_default/3}.
 
--spec merge_fun_crdt(Args :: list()) -> fun().
+-spec merge_fun_crdt(Args :: list()) -> {fun(), fun()}.
 merge_fun_crdt([_Type]) ->
-    fun ec_dvv:merge_default/3.
+    {fun ec_dvv:merge_default/3, fun ec_dvv:merge_default/3}.
 
 -spec reset_crdt(State :: #ec_dvv{}) -> #ec_dvv{}.
 reset_crdt(#ec_dvv{module=?MODULE}=State) ->
-    ec_crdt_util:reset(State, ?EC_RESET_ALL).
+    State1 = ec_crdt_util:reset(State, ?EC_RESET_ALL),
+    State1#ec_dvv{annonymus_list=[new_annonymus_value()]}.
 
 -spec causal_consistent_crdt(Delta :: #ec_dvv{}, State :: #ec_dvv{}, Offset :: non_neg_integer(), ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | 
 															 ?EC_CAUSALLY_AHEAD |
@@ -101,22 +103,46 @@ query_crdt(_Criteria, #ec_dvv{module=?MODULE, annonymus_list=[{VSet, _RSet, _CSe
 
 % private function
 
--spec add_win(AL1 :: list(), AL2 :: list()) -> list().
-add_win([{VSet1, _, CSet1}],
-        [{VSet2, _, CSet2}]) ->    
+-spec reconcile_local({add | rmv, {VSet1 :: sets:set(), RSet1 :: sets:set(), CSet1 :: sets:set()}},
+		      {add | rmv, {VSet2 :: sets:set(), RSet2 :: sets:set(), CSet2 :: sets:set()}},
+		      Type :: ?EC_AWORSET | ?EC_RWORSET) 
+		     -> {?EC_RECONCILE | ?EC_RECONCILED, {add | rmv, {sets:set(), sets:set(), sets:set()}}}.
+reconcile_local({rmv, {_V1, _R1, C1}}=D1, {add, {_V2, _R2, C2}}=D2, ?EC_AWORSET) ->
+    CI = sets:intersection(C1, C2),
+    case sets:size(CI) of 
+	0 -> 
+	    {?EC_RECONCILE, D1};
+	_ ->
+	    {?EC_RECONCILED, D2}
+    end;
+reconcile_local({add, {V1, _R1, _C1}}=D1, {rmv, {_V2, R2, _C2}}=D2, ?EC_RWORSET) ->
+    E1 = get_elements(V1),
+    RI = sets:intersection(E1, R2),
+    case sets:size(RI) of
+	0 ->
+	    {?EC_RECONCILE, D1};
+	_ ->
+	    {?EC_RECONCILED, D2}
+    end;
+reconcile_local(D1, _D2, _Type) ->
+    {?EC_RECONCILE, D1}.
+			     
+-spec add_win(D1 :: term(), D2 :: term()) -> term().
+add_win({VSet1, _, CSet1},
+        {VSet2, _, CSet2}) ->    
     CSet = sets:union(CSet1, CSet2),
     VSet = sets:union(sets:intersection(VSet1, VSet2),
                       sets:union(get_add_element_set(VSet1, CSet2),
                                  get_add_element_set(VSet2, CSet1))),
-    [{VSet, sets:new(), CSet}].
+    {VSet, sets:new(), CSet}.
 
--spec rmv_win(AL1 :: list(), AL2 :: list()) -> list().
-rmv_win([{VSet1, RSet1, CSet1}],
-        [{VSet2, RSet2, CSet2}]) ->    
+-spec rmv_win(D1 :: term(), D2 :: term()) -> term().
+rmv_win({VSet1, RSet1, CSet1},
+        {VSet2, RSet2, CSet2}) ->    
     VX2 = sets:subtract(VSet2, sets:intersection(get_cartesian_product(RSet1, CSet2), VSet2)),
-    [{VSet, _, CSet}] = add_win([{VSet1, undefined, CSet1}], [{VX2, undefined, CSet2}]),
+    {VSet, _, CSet} = add_win({VSet1, undefined, CSet1}, {VX2, undefined, CSet2}),
     RSet = sets:subtract(sets:union(RSet1, RSet2), get_elements(VSet)),
-    [{VSet, RSet, CSet}].
+    {VSet, RSet, CSet}.
 
 -spec next_counter_value(State :: #ec_dvv{}, ServerId :: term()) -> non_neg_integer().
 next_counter_value(#ec_dvv{module=?MODULE}=State, ServerId) ->
@@ -132,17 +158,22 @@ new_value({add, Value}, #ec_dvv{module=?MODULE}=State, ServerId) ->
     C1 = next_counter_value(State, ServerId),
     VSet = sets:add_element({ServerId, C1, Value}, sets:new()),
     CSet = sets:add_element({ServerId, C1}, sets:new()),
-    {VSet, sets:new(), CSet};
+    {add, {VSet, sets:new(), CSet}};
 new_value({rmv, Value}, #ec_dvv{module=?MODULE, type=Type, annonymus_list=[{VSet, _RSet, _CSet}]}, _ServerId) ->
     CSet = sets:fold(fun(X, Set) -> get_element_set(Value, X, Set) end, sets:new(), VSet),
-    case {sets:size(CSet) > 0, Type} of
-        {true, ?EC_AWORSET} ->
-	    {sets:new(), sets:new(), CSet};
-	{true, ?EC_RWORSET} ->
-	    {sets:new(), sets:from_list([Value]), CSet};
-        {false, _} ->
-	    {undefined, undefined, undefined}
-    end.
+    D1 = case {sets:size(CSet) > 0, Type} of
+	     {true, ?EC_AWORSET} ->
+		 {sets:new(), sets:new(), CSet};
+	     {true, ?EC_RWORSET} ->
+		 {sets:new(), sets:from_list([Value]), CSet};
+	     {false, _} ->
+		 {undefined, undefined, undefined}
+	 end,
+    {rmv, D1}.
+
+-spec new_annonymus_value() -> {sets:set(), sets:set(), sets:set()}.
+new_annonymus_value() ->
+    {sets:new(), sets:new(), sets:new()}.
 
 -spec get_cartesian_product(Set1 :: sets:set(), Set2 :: sets:set()) -> sets:set().
 get_cartesian_product(RSet, CSet) ->

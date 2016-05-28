@@ -24,7 +24,7 @@
 
 -callback delta_crdt(Ops :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 
--callback reconcile_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+-callback reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_RECONCILE_LOCAL | ?EC_RECONCILE_GLOBAL) -> #ec_dvv{}.
 
 -callback update_fun_crdt(Args :: list()) -> {fun(), fun()}.
 
@@ -74,7 +74,7 @@ merge(#ec_dvv{module=Mod, type=Type, option=Option}=Delta,
 	?EC_CAUSALLY_CONSISTENT ->
 	    State1 = ec_dvv:sync([Delta, State], Mod:merge_fun_crdt([Type])),
 	    State2 = ec_crdt_util:add_param(State1, State),
-	    State3 = Mod:reconcile_crdt(State2, ServerId),
+	    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_RECONCILE_GLOBAL),
 	    {ok, ec_crdt_util:add_param(State3, State)};
 	?EC_CAUSALLY_AHEAD      ->
 	    process_causally_ahead(State, ServerId);
@@ -120,7 +120,7 @@ reset(#ec_dvv{module=Mod}=DVV) ->
 update(#ec_dvv{module=Mod, type=Type, option=Option}=Delta, #ec_dvv{module=Mod, type=Type, option=Option}=State, UpdateFun, ServerId) ->
     State1 = ec_dvv:update(Delta, State, UpdateFun, ServerId),
     State2 = ec_crdt_util:add_param(State1, State),
-    State3 = Mod:reconcile_crdt(State2, ServerId),
+    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_RECONCILE_LOCAL),
     ec_crdt_util:add_param(State3, State).
 
 -spec process_causally_ahead(State :: #ec_dvv{}, ServerId :: term()) -> {error, {?EC_CAUSALLY_AHEAD, atom() | #ec_dot{}}}.

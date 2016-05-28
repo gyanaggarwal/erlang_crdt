@@ -22,7 +22,7 @@
 
 -export([new_crdt/2,
 	 delta_crdt/4,
-	 reconcile_crdt/2,
+	 reconcile_crdt/3,
 	 update_fun_crdt/1,
 	 merge_fun_crdt/1,
 	 query_crdt/2,
@@ -45,8 +45,8 @@ new_crdt(Type, Args) ->
 delta_crdt(Ops, DL, #ec_dvv{module=?MODULE, type=Type}=State, ServerId) ->
     ec_crdt_util:new_delta(new_value(Ops, Type), DL, State, ServerId).
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
-reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId) ->
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_RECONCILE_LOCAL | ?EC_RECONCILE_GLOBAL) -> #ec_dvv{}.
+reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, _Flag) ->
     State.
 
 -spec causal_consistent_crdt(Delta :: #ec_dvv{}, State :: #ec_dvv{}, Offset :: non_neg_integer(), ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT |

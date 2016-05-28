@@ -29,7 +29,8 @@
 	 causal_consistent/4,
 	 compare_causality/2,
 	 is_valid/1,
-	 sort_vv/1,
+	 sort_dot_list/1,
+	 replace_dot_list/2,
 	 merge_default/3]).
 
 -include("erlang_crdt.hrl").
@@ -44,7 +45,7 @@ new(V) ->
 new(undefined, V) ->
     new(V);
 new(DL, V) when is_list(V) ->
-    #ec_dvv{dot_list=sort_vv(normalized_dot_list(DL)), annonymus_list=V};
+    #ec_dvv{dot_list=sort_dot_list(normalized_dot_list(DL)), annonymus_list=V};
 new(DL, V) ->
     new(DL, [V]).
 
@@ -113,7 +114,7 @@ causal_consistent(#ec_dvv{dot_list=DDL}, #ec_dvv{dot_list=SDL}, Offset, ServerId
 
 -spec compare_causality(Clock1 :: #ec_dvv{}, Clock2 :: #ec_dvv{}) -> ?EC_EQUAL | ?EC_MORE | ?EC_LESS | ?EC_CONCURRENT.
 compare_causality(#ec_dvv{dot_list=DL1}, #ec_dvv{dot_list=DL2}) ->
-    compare_causality(sort_vv(DL1), sort_vv(DL2), ?EC_EQUAL).
+    compare_causality(sort_dot_list(DL1), sort_dot_list(DL2), ?EC_EQUAL).
 
 -spec is_valid(Clock :: #ec_dvv{} | undefined) -> true | false.
 is_valid(undefined) ->
@@ -121,9 +122,13 @@ is_valid(undefined) ->
 is_valid(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
     lists:foldl(fun(#ec_dot{values=VS}, Flag) -> Flag orelse length(VS) > 0 end, length(AL) > 0, DL).
 
--spec sort_vv(VV :: list()) -> list().
-sort_vv(VV) ->			    
-    lists:keysort(#ec_dot.replica_id, VV).
+-spec sort_dot_list(DotList :: list()) -> list().
+sort_dot_list(DotList) ->			    
+    lists:keysort(#ec_dot.replica_id, DotList).
+
+-spec replace_dot_list(DotList :: list(), Dot :: #ec_dot{}) -> list().
+replace_dot_list(DotList, Dot) ->
+    replace_dot_list(sort_dot_list(DotList), Dot, false, []).
 
 -spec merge_default(Value1 :: term(), Value2 ::term(), DefaultValue ::term()) -> term().
 merge_default(_Value1, _Value2, DefaultValue) ->    
@@ -131,13 +136,27 @@ merge_default(_Value1, _Value2, DefaultValue) ->
 
 %% private function
 
+-spec replace_dot_list(DotList :: list(), Dot :: #ec_dot{}, InsertFlag :: true | false, Acc :: list()) -> list().
+replace_dot_list([#ec_dot{replica_id=Id1}=Dot1 | TDL], #ec_dot{replica_id=Id2}=Dot2, false, Acc) when Id1 < Id2 ->
+    replace_dot_list(TDL, Dot2, false, [Dot1 | Acc]);
+replace_dot_list([#ec_dot{replica_id=Id1} | TDL], #ec_dot{replica_id=Id2}=Dot2, false, Acc) when Id1 =:= Id2 ->
+    replace_dot_list(TDL, Dot2, true, [Dot2 | Acc]);
+replace_dot_list([#ec_dot{replica_id=Id1} | _TDL]=DL, #ec_dot{replica_id=Id2}=Dot2, false, Acc) when Id1 > Id2 ->
+    replace_dot_list(DL, Dot2, true, [Dot2 | Acc]);
+replace_dot_list([Dot1 | TDL], Dot2, true, Acc) ->
+    replace_dot_list(TDL, Dot2, true, [Dot1 | Acc]);
+replace_dot_list([], Dot, false, Acc) ->
+    replace_dot_list([], Dot, true, [Dot | Acc]);
+replace_dot_list([], _Dot, true, Acc) ->
+    sort_dot_list(Acc).
+
 -spec normalized_dot_list(DotList :: list()) ->list().
 normalized_dot_list(DotList) ->
     lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max} | Acc] end, [], DotList).
 			
 -spec dot(DL :: list(), Id :: atom(), V :: term(), UpdateFun :: {fun(), fun()}) -> list().
 dot(DL, Id, V, UpdateFun) ->
-    dot(sort_vv(DL), Id, V, UpdateFun, true, []).
+    dot(sort_dot_list(DL), Id, V, UpdateFun, true, []).
 
 -spec dot(DL :: list(), Id :: atom(), V :: term(), UpdateFun :: {fun(), fun()}, InsertFlag :: true | false, Acc :: list()) -> list().
 dot([#ec_dot{replica_id=Id, counter_max=Max, counter_min=Min, values=Values} | T], Id, V, {AFun, _}=UpdateFun,  true, Acc) ->
@@ -229,8 +248,8 @@ sync2(#ec_dvv{dot_list=[], annonymus_list=[]}, {Clock2, MergeFun, Flag}) ->
 sync2(Clock1, {#ec_dvv{dot_list=[], annonymus_list=[]}, MergeFun, Flag}) ->
     {Clock1, MergeFun, Flag};
 sync2(#ec_dvv{dot_list=DL1, annonymus_list=AL1}, {#ec_dvv{dot_list=DL2, annonymus_list=AL2}, MergeFun, Flag}) ->
-    DLS1 = sort_vv(DL1),
-    DLS2 = sort_vv(DL2),
+    DLS1 = sort_dot_list(DL1),
+    DLS2 = sort_dot_list(DL2),
     AL = case compare_causality(DLS1, DLS2, ?EC_EQUAL) of
 	     ?EC_LESS ->
 		 AL2;

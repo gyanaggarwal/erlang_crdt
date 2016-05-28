@@ -49,6 +49,11 @@
 -define(EC_INCORRECT_DELTA_INTERVAL,  incorrect_delta_interval).
 -define(EC_EMPTY_DELTA_INTERVAL,      empty_delta_interval).
 
+-define(EC_RECONCILE_LOCAL,           ec_reconcile_local).
+-define(EC_RECONCILE_GLOBAL,          ec_reconcile_global).
+-define(EC_RECONCILE,                 ec_reconcile).
+-define(EC_RECONCILED,                ec_reconciled).
+
 -record(ec_dot,            {replica_id=undefined   :: term() | undefined,
 			    counter_max=0          :: non_neg_integer(),
 			    counter_min=0          :: non_neg_integer(),

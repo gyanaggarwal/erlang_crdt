@@ -18,15 +18,7 @@
 
 -module(ec_gen_crdt_test).
 
--export([new/2,
-	 mutate/5,
-	 data_mvregister/0,
-	 data_gcounter/0,
-	 data_pncounter/0,
-	 data_flag/2,
-	 test1/1,
-	 test1/2,
-	 test3/0]).
+-compile(export_all).
 
 -include("erlang_crdt.hrl").
 
@@ -112,23 +104,55 @@ test1({Mod, Type, L11, L13, L15, L23}, Criteria) ->
      DV27, ec_gen_crdt:query(Criteria, DV27),
      DV17, ec_gen_crdt:query(Criteria, DV17),
      R5, R6, R7}.
-%    {DI12, DI13, DI16, DV23}.
 
-test3() ->
-    DV11 = #ec_dvv{},
-    DI11 = #ec_dvv{},
-    {DI12, DV12} = test3Data(DI11, DV11, v11),
-    {DI13, DV13} = test3Data(DI12, DV12, v12),
-    DR13 = ec_crdt_util:reset(DI13, ?EC_RESET_ALL),
-    {DI14, DV14} = test3Data(DR13, DV13, v13),
-    {DI15, DV15} = test3Data(DI14, DV14, v14),
-    {DI12, DI13, DI14, DI15, DV12, DV13, DV14, DV15}.
+test_orset01(Type) ->
+    {UFun, DV11} = make_orset(Type),
+    
+    DV12 = mutate_orset({add, v11}, ec_dvv:join(DV11), DV11, UFun, dv12),
+    DV13 = mutate_orset({add, v12}, ec_dvv:join(DV12), DV12, UFun, dv13),
+    DV14 = mutate_orset({add, v13}, ec_dvv:join(DV13), DV13, UFun, dv14),
+    DV15 = mutate_orset({rmv, v11}, ec_dvv:join(DV14), DV14, UFun, dv15),
+    DV16 = mutate_orset({add, v11}, ec_dvv:join(DV15), DV15, UFun, dv16),
+    ok.
+ 
+data_concurrent_orset01() ->
+    [{add, v11}, {add, v12}, {rmv, v11}, {add, v11}, {rmv, v12}, {add, v12}].
 
-test3Data(DI1, DV1, Value) ->
-    DL1 = ec_dvv:join(DV1),
-    DD1 = ec_dvv:new(DL1, Value),
-    {ec_dvv:update(DD1, DI1, fun ec_dvv:merge_default/3, x1), 
-     ec_dvv:update(DD1, DV1, fun ec_dvv:merge_default/3, x1)}.
+data_concurrent_orset02() ->    
+    [{add, v11}, {add, v12}, {add, v13}, {rmv, v13}, {add, v14}, {rmv, v14}].
+
+data_concurrent_orset03() ->
+    [{add, v11}, {add, v12}, {rmv, v11}, {add, v13}, {rmv, v12}, {add, v14}].
+
+data_concurrent_orset04() ->
+    [{add, v11}, {add, v12}, {add, v13}, {rmv, v11}, {add, v14}, {rmv, v12}].
+    
+test_orset02(Type, [Ops1, Ops2, Ops3, Ops4, Ops5, Ops6]) ->
+    {UFun, DV11} = make_orset(Type),
+    DV12 = mutate_orset(Ops1, ec_dvv:join(DV11), DV11, UFun, dv12),
+    DV13 = mutate_orset(Ops2, ec_dvv:join(DV12), DV12, UFun, dv13),
+    DV14 = mutate_orset(Ops3, ec_dvv:join(DV13), DV13, UFun, dv14),
+    DV15 = mutate_orset(Ops4, ec_dvv:join(DV11), DV14, UFun, dv15),
+    DV16 = mutate_orset(Ops5, ec_dvv:join(DV15), DV15, UFun, dv16),
+    DV17 = mutate_orset(Ops6, ec_dvv:join(DV11), DV16, UFun, dv17),
+    ok.
+
+make_orset(Type) ->
+    UFun = {fun ec_dvv:merge_default/3, fun ec_dvv:merge_default/3},
+    DV11 = ec_gen_crdt:new(ec_gen_scrdt, Type),
+    io:fwrite("dv11=~p~n~n", [ec_gen_crdt:query(DV11)]),
+    {UFun, DV11}.
+
+mutate_orset(Ops, DL11, DV11, UFun, Tagdv) ->
+    DD11 = ec_gen_scrdt:delta_crdt(Ops, DL11, DV11, x1),
+    DX12 = ec_crdt_util:add_param(ec_dvv:update(DD11, DV11, UFun, x1), DV11),
+    DV12 = ec_crdt_util:add_param(ec_gen_scrdt:reconcile_crdt(DX12, x1, ?EC_RECONCILE_LOCAL), DV11),
+    io:fwrite("~p=~p~n~n", [Tagdv, ec_gen_crdt:query(DV12)]),
+    DV12.
+
+
+
+    
 
     
 

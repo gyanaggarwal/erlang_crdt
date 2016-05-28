@@ -24,4 +24,3 @@
 {ec_gen_crdt_test,        [{i, "../include/"}, {outdir, "../ebin/"}]}.
 
 
-
