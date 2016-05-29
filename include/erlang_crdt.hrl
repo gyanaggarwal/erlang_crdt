@@ -16,6 +16,9 @@
 %% under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+-define(EC_GEN_MCRDT,                 ec_gen_mcrdt).
+-define(EC_GEN_SCRDT,                 ec_gen_scrdt).
+
 -define(EC_LESS,                      ec_less).
 -define(EC_EQUAL,                     ec_equal).
 -define(EC_MORE,                      ec_more).
@@ -38,6 +41,12 @@
 -define(EC_RWORSET,                   ec_rworset).
 -define(EC_EWFLAG,                    ec_ewflag).
 -define(EC_DWFLAG,                    ec_dwflag).
+
+-define(EC_OPS_VAL,                   val).
+-define(EC_OPS_INC,                   inc).
+-define(EC_OPS_DEC,                   dec).
+-define(EC_OPS_ADD,                   add).
+-define(EC_OPS_RMV,                   rmv).
 
 -define(EC_CAUSALLY_CONSISTENT,       causally_consistent).
 -define(EC_CAUSALLY_BEHIND,           causally_behind).

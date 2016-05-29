@@ -91,13 +91,13 @@ reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State) ->
 	?EC_MVREGISTER ->
 	    ec_crdt_util:reset(State, ?EC_RESET_ALL);
 	?EC_EWFLAG     ->
-	    ec_crdt_util:reset(State, ?EC_RESET_RETAIN_ALL);
+	    ec_crdt_util:reset(State, ?EC_RESET_ANNONYMUS_LIST);
 	?EC_DWFLAG     ->
-	    ec_crdt_util:reset(State, ?EC_RESET_RETAIN_ALL);
+	    ec_crdt_util:reset(State, ?EC_RESET_ANNONYMUS_LIST);
 	?EC_PNCOUNTER  ->
-	    ec_crdt_util:reset(State, ?EC_RESET_RETAIN_ALL);
+	    ec_crdt_util:reset(State, ?EC_RESET_ALL);
 	?EC_GCOUNTER   ->
-	    ec_crdt_util:reset(State, ?EC_RESET_RETAIN_ALL)
+	    ec_crdt_util:reset(State, ?EC_RESET_ALL)
     end. 
 
 -spec update_fun_crdt(Args :: list()) -> {fun(), fun()}.
@@ -187,17 +187,17 @@ disable_win(_Value1, _Value2, DefaultValue) ->
 -spec new_value(Ops :: term(), Type :: atom()) -> term().
 new_value({Tag, Value}, Type) ->
     case {Type, Tag} of
-	{?EC_MVREGISTER, value} ->
+	{?EC_MVREGISTER, ?EC_OPS_VAL} ->
 	    Value;
-	{?EC_EWFLAG, value}     ->
+	{?EC_EWFLAG, ?EC_OPS_VAL}     ->
 	    Value;
-	{?EC_DWFLAG, value}     ->
+	{?EC_DWFLAG, ?EC_OPS_VAL}     ->
 	    Value;
-	{?EC_GCOUNTER, inc}     ->
+	{?EC_GCOUNTER, ?EC_OPS_INC}     ->
 	    Value;
-	{?EC_PNCOUNTER, inc}    ->
+	{?EC_PNCOUNTER, ?EC_OPS_INC}    ->
 	    {Value, 0};
-	{?EC_PNCOUNTER, dec}    ->
+	{?EC_PNCOUNTER, ?EC_OPS_DEC}    ->
 	    {0, Value}
     end.
 
