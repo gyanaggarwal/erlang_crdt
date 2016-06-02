@@ -18,9 +18,11 @@
 
 {ec_dvv,                  [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {ec_crdt_util,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_sets_util,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {ec_gen_crdt,             [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {ec_gen_mcrdt,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {ec_gen_scrdt,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {ec_gen_crdt_test,        [{i, "../include/"}, {outdir, "../ebin/"}]}.
+
 
 

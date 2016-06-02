@@ -38,8 +38,8 @@
 
 -callback reset_crdt(State :: #ec_dvv{}) -> #ec_dvv{}.
 
--export([new/2,
-	 new/3,
+-export([new/1,
+	 new/2,
 	 merge/2,
 	 merge/3,
 	 mutate/5,
@@ -47,12 +47,13 @@
 	 query/2,
 	 reset/1]).
 
--spec new(Mod :: atom(), Type :: atom()) -> #ec_dvv{}.
-new(Mod, Type) ->
-    new(Mod, Type, undefined).
+-spec new(Type :: atom()) -> #ec_dvv{}.
+new(Type) ->
+    new(Type, ?EC_UNDEFINED).
 
--spec new(Mod :: atom(), Type :: atom(), Args :: term()) -> #ec_dvv{}.
-new(Mod, Type, Args) ->
+-spec new(Type :: atom(), Args :: term()) -> #ec_dvv{}.
+new(Type, Args) ->
+    Mod = ec_crdt_util:find_module(Type),
     Mod:new_crdt(Type, Args).
 
 -spec merge(Delta :: #ec_dvv{}, State :: #ec_dvv{}) -> {ok, #ec_dvv{}} | {error, atom() | {atom(), #ec_dot{}}}.
@@ -75,7 +76,7 @@ merge(#ec_dvv{module=Mod, type=Type, option=Option}=Delta,
 	    State1 = ec_dvv:sync([Delta, State], Mod:merge_fun_crdt([Type])),
 	    State2 = ec_crdt_util:add_param(State1, State),
 	    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_RECONCILE_GLOBAL),
-	    {ok, ec_crdt_util:add_param(State3, State)};
+	    {ok, ec_crdt_util:add_param(State3#ec_dvv{status=?EC_DVV_DIRTY}, State)};
 	?EC_CAUSALLY_AHEAD      ->
 	    process_causally_ahead(State, ServerId);
 	Reason                  ->
@@ -88,10 +89,11 @@ mutate(Ops, DL, #ec_dvv{module=Mod, type=Type, option=Option}=DI, #ec_dvv{module
     Delta = Mod:delta_crdt(Ops, DL, State, ServerId),
     case ec_dvv:is_valid(Delta) of
 	true  ->
-	    case ec_dvv:causal_consistent(Delta, State, 0, ServerId) of
+	    Delta1 = Delta#ec_dvv{status=?EC_DVV_DIRTY},
+	    case ec_dvv:causal_consistent(Delta1, State, 0, ServerId) of
 		?EC_CAUSALLY_CONSISTENT ->
-		    State1 = update(Delta, State, UpdateFun, ServerId),
-		    DI1    = update(Delta, DI, UpdateFun, ServerId),
+		    State1 = update(Delta1, State, UpdateFun, ServerId),
+		    DI1    = update(Delta1, DI,    UpdateFun, ServerId),
 		    {ok, DI1, State1};
 		?EC_CAUSALLY_AHEAD      ->
 		    process_causally_ahead(State, ServerId);
@@ -104,7 +106,7 @@ mutate(Ops, DL, #ec_dvv{module=Mod, type=Type, option=Option}=DI, #ec_dvv{module
 
 -spec query(State :: #ec_dvv{}) -> term().
 query(State) ->
-    query(undefined, State).
+    query(?EC_UNDEFINED, State).
 
 -spec query(Criteria :: term(), State :: #ec_dvv{}) -> term().
 query(Criteria, #ec_dvv{module=Mod}=State) ->
@@ -112,7 +114,8 @@ query(Criteria, #ec_dvv{module=Mod}=State) ->
 
 -spec reset(DVV :: #ec_dvv{}) -> #ec_dvv{}.
 reset(#ec_dvv{module=Mod}=DVV) ->
-    Mod:reset_crdt(DVV).
+    DVV1 = Mod:reset_crdt(DVV),
+    DVV1#ec_dvv{status=?EC_DVV_CLEAN}.
 			      
 % private function
 
@@ -121,7 +124,7 @@ update(#ec_dvv{module=Mod, type=Type, option=Option}=Delta, #ec_dvv{module=Mod, 
     State1 = ec_dvv:update(Delta, State, UpdateFun, ServerId),
     State2 = ec_crdt_util:add_param(State1, State),
     State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_RECONCILE_LOCAL),
-    ec_crdt_util:add_param(State3, State).
+    ec_crdt_util:add_param(State3#ec_dvv{status=?EC_DVV_DIRTY}, State).
 
 -spec process_causally_ahead(State :: #ec_dvv{}, ServerId :: term()) -> {error, {?EC_CAUSALLY_AHEAD, atom() | #ec_dot{}}}.
 process_causally_ahead(#ec_dvv{}=State, ServerId) ->

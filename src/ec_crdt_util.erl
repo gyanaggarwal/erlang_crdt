@@ -21,6 +21,7 @@
 -export([add_param/2, 
 	 new_delta/4,
 	 find_dot/2,
+	 find_module/1,
 	 reset/2]).
 
 -include("erlang_crdt.hrl").
@@ -54,6 +55,15 @@ reset(#ec_dvv{dot_list=DL}=DVV, ?EC_RESET_ALL) ->
     DVV#ec_dvv{dot_list=reset_dot_list(DL, ?EC_RESET_VALUES), annonymus_list=[]};
 reset(#ec_dvv{dot_list=DL}=DVV, Flag) ->
     DVV#ec_dvv{dot_list=reset_dot_list(DL, Flag)}.
+
+-spec find_module(Type :: atom()) -> atom() | error.
+find_module(Type) ->
+    case maps:find(Type, ?EC_CRDT_MAP) of
+	error     ->
+	    error;
+	{ok, Mod} ->
+	    Mod
+    end.
 
 % private function
 

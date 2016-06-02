@@ -29,6 +29,7 @@
 	 causal_consistent/4,
 	 compare_causality/2,
 	 is_valid/1,
+	 is_clean/1,
 	 sort_dot_list/1,
 	 replace_dot_list/2,
 	 merge_default/3]).
@@ -41,8 +42,8 @@ new(V) when is_list(V) ->
 new(V) ->
     new([V]).
 
--spec new(DL :: list() | undefined, V :: term()) -> #ec_dvv{}.
-new(undefined, V) ->
+-spec new(DL :: list() | ?EC_UNDEFINED, V :: term()) -> #ec_dvv{}.
+new(?EC_UNDEFINED, V) ->
     new(V);
 new(DL, V) when is_list(V) ->
     #ec_dvv{dot_list=sort_dot_list(normalized_dot_list(DL)), annonymus_list=V};
@@ -57,38 +58,38 @@ sync(Clocks, MergeFun) ->
 update(#ec_dvv{dot_list=DL, annonymus_list=[V]}, Id) ->
     #ec_dvv{dot_list=dot(DL, Id, V, {fun merge_default/3, fun merge_default/3})}.
 
--spec update(UClock :: #ec_dvv{}, LClock :: #ec_dvv{} | undefined, Id :: term()) -> #ec_dvv{}.
+-spec update(UClock :: #ec_dvv{}, LClock :: #ec_dvv{} | ?EC_UNDEFINED, Id :: term()) -> #ec_dvv{}.
 update(UClock, LClock, Id) ->
     update(UClock, LClock, {fun merge_default/3, fun merge_default/3}, Id).
 
--spec update(UClock :: #ec_dvv{}, LClock :: #ec_dvv{} | undefined, UpdateFun :: {fun(), fun()}, Id :: term()) -> #ec_dvv{}.
-update(UClock, undefined, _UpdateFun, Id) ->
+-spec update(UClock :: #ec_dvv{}, LClock :: #ec_dvv{} | ?EC_UNDEFINED, UpdateFun :: {fun(), fun()}, Id :: term()) -> #ec_dvv{}.
+update(UClock, ?EC_UNDEFINED, _UpdateFun, Id) ->
     update(UClock, Id);
 update(#ec_dvv{annonymus_list=[UV]}=UClock, LClock, UpdateFun, Id) ->
     {#ec_dvv{dot_list=DL, annonymus_list=AL}, _, ?EC_MERGE_DVV} = sync2(UClock#ec_dvv{annonymus_list=[]}, {LClock, UpdateFun, ?EC_MERGE_DVV}),
     #ec_dvv{dot_list=dot(DL, Id, UV, UpdateFun), annonymus_list=AL}.
 
--spec values(Clock :: #ec_dvv{} | undefined) -> list() | undefined.
-values(undefined) ->
-    undefined;
+-spec values(Clock :: #ec_dvv{} | ?EC_UNDEFINED) -> list() | ?EC_UNDEFINED.
+values(?EC_UNDEFINED) ->
+    ?EC_UNDEFINED;
 values(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
     lists:foldl(fun(#ec_dot{values=Vs}, Acc) -> Acc ++ Vs end, AL, DL).
 
--spec join(Clock :: #ec_dvv{} | undefined) -> list() | undefined.
-join(undefined) ->
-    undefined;
+-spec join(Clock :: #ec_dvv{} | ?EC_UNDEFINED) -> list() | ?EC_UNDEFINED.
+join(?EC_UNDEFINED) ->
+    ?EC_UNDEFINED;
 join(#ec_dvv{dot_list=DL}) ->
     lists:foldl(fun(Dot, Acc) -> [Dot#ec_dot{values=[]} | Acc] end, [], DL).
 
--spec causal_consistent(Clock1 :: #ec_dvv{} | undefined, 
-			Clock2 :: #ec_dvv{} | undefined, 
+-spec causal_consistent(Clock1 :: #ec_dvv{} | ?EC_UNDEFINED, 
+			Clock2 :: #ec_dvv{} | ?EC_UNDEFINED, 
 			OffSet :: non_neg_integer(), 
 			ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | ?EC_CAUSALLY_BEHIND | ?EC_CAUSALLY_AHEAD.
-causal_consistent(undefined, undefined, _Offset, _ServerId) ->
+causal_consistent(?EC_UNDEFINED, ?EC_UNDEFINED, _Offset, _ServerId) ->
     ?EC_CAUSALLY_CONSISTENT;
-causal_consistent(undefined, #ec_dvv{}, _Offset, _ServerId) ->
+causal_consistent(?EC_UNDEFINED, #ec_dvv{}, _Offset, _ServerId) ->
     ?EC_CAUSALLY_BEHIND;
-causal_consistent(#ec_dvv{}, undefined, _Offset, _ServerId) ->
+causal_consistent(#ec_dvv{}, ?EC_UNDEFINED, _Offset, _ServerId) ->
     ?EC_CAUSALLY_AHEAD;
 causal_consistent(#ec_dvv{dot_list=DDL}, #ec_dvv{dot_list=SDL}, Offset, ServerId) ->
     case {lists:keyfind(ServerId, #ec_dot.replica_id, DDL), lists:keyfind(ServerId, #ec_dot.replica_id, SDL)} of
@@ -116,11 +117,15 @@ causal_consistent(#ec_dvv{dot_list=DDL}, #ec_dvv{dot_list=SDL}, Offset, ServerId
 compare_causality(#ec_dvv{dot_list=DL1}, #ec_dvv{dot_list=DL2}) ->
     compare_causality(sort_dot_list(DL1), sort_dot_list(DL2), ?EC_EQUAL).
 
--spec is_valid(Clock :: #ec_dvv{} | undefined) -> true | false.
-is_valid(undefined) ->
+-spec is_valid(Clock :: #ec_dvv{} | ?EC_UNDEFINED) -> true | false.
+is_valid(?EC_UNDEFINED) ->
     false;
 is_valid(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
     lists:foldl(fun(#ec_dot{values=VS}, Flag) -> Flag orelse length(VS) > 0 end, length(AL) > 0, DL).
+
+-spec is_clean(Clock :: #ec_dvv{}) -> true | false.
+is_clean(#ec_dvv{status=Status}) ->
+    Status =:= ?EC_DVV_CLEAN.
 
 -spec sort_dot_list(DotList :: list()) -> list().
 sort_dot_list(DotList) ->			    
@@ -239,9 +244,9 @@ sync1(Clocks, MergeFun, Flag) ->
     DVV.
 
 -spec sync2(Clock1 :: #ec_dvv{}, {Clock2 :: #ec_dvv{}, MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV}) -> #ec_dvv{}.
-sync2(undefined, {Clock2, MergeFun, Flag}) ->
+sync2(?EC_UNDEFINED, {Clock2, MergeFun, Flag}) ->
     {Clock2, MergeFun, Flag};
-sync2(Clock1, {undefined, MergeFun, Flag}) ->
+sync2(Clock1, {?EC_UNDEFINED, MergeFun, Flag}) ->
     {Clock1, MergeFun, Flag};
 sync2(#ec_dvv{dot_list=[], annonymus_list=[]}, {Clock2, MergeFun, Flag}) ->
     {Clock2, MergeFun, Flag};
@@ -271,13 +276,13 @@ sync4([#ec_dot{replica_id=Id1}=H1 | T1]=DL1, [#ec_dot{replica_id=Id2}=H2 | T2]=D
             sync4(T1, T2, MergeFun, Flag, [merge(H1, H2, MergeFun, Flag) | Acc]);
 	false ->            
 	    case {Id1, Id2, Id1 < Id2} of
-                {undefined, _, _} ->
+                {?EC_UNDEFINED, _, _} ->
                     sync4(T1, DL2, MergeFun, Flag, Acc);
-                {_, undefined, _} ->
+                {_, ?EC_UNDEFINED, _} ->
                     sync4(DL1, T2, MergeFun, Flag, Acc);
-                {_, _, true}      ->
+                {_, _, true}          ->
                     sync4(T1, DL2, MergeFun, Flag, [H1 | Acc]);
-                {_, _, false}     ->
+                {_, _, false}         ->
                     sync4(DL1, T2, MergeFun, Flag, [H2 | Acc])
             end
     end;

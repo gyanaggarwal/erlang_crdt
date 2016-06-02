@@ -70,7 +70,7 @@ causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, option=Option}=Delta,
     end.
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> term().
-query_crdt(_Criteria, #ec_dvv{module=?MODULE, type=Type}=State) ->
+query_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE, type=Type}=State) ->
     Values = ec_dvv:values(State),
     case Type of
 	?EC_MVREGISTER ->

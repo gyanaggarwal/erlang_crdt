@@ -18,6 +18,29 @@
 
 -define(EC_GEN_MCRDT,                 ec_gen_mcrdt).
 -define(EC_GEN_SCRDT,                 ec_gen_scrdt).
+-define(EC_GEN_CCRDT,                 ec_gen_ccrdt).
+
+-define(EC_MVREGISTER,                ec_mvregister).
+-define(EC_GCOUNTER,                  ec_gcounter).
+-define(EC_PNCOUNTER,                 ec_pncounter).
+-define(EC_AWORSET,                   ec_aworset).
+-define(EC_RWORSET,                   ec_rworset).
+-define(EC_EWFLAG,                    ec_ewflag).
+-define(EC_DWFLAG,                    ec_dwflag).
+-define(EC_PWORMAP,                   ec_pwormap).
+-define(EC_RWORMAP,                   ec_rwormap).
+-define(EC_COMPMAP,                   ec_compmap).
+
+-define(EC_CRDT_MAP,                  maps:from_list([{?EC_MVREGISTER, ?EC_GEN_MCRDT},
+						      {?EC_GCOUNTER,   ?EC_GEN_MCRDT},
+						      {?EC_PNCOUNTER,  ?EC_GEN_MCRDT},
+						      {?EC_EWFLAG,     ?EC_GEN_MCRDT},
+						      {?EC_DWFLAG,     ?EC_GEN_MCRDT},
+						      {?EC_AWORSET,    ?EC_GEN_SCRDT},
+						      {?EC_RWORSET,    ?EC_GEN_SCRDT},
+						      {?EC_PWORMAP,    ?EC_GEN_SCRDT},
+						      {?EC_RWORMAP,    ?EC_GEN_SCRDT},
+						      {?EC_COMPMAP,    ?EC_GEN_CCRDT}])).
 
 -define(EC_LESS,                      ec_less).
 -define(EC_EQUAL,                     ec_equal).
@@ -34,19 +57,14 @@
 -define(EC_RESET_VALUES_ONLY,         ec_reset_values_only).
 -define(EC_RESET_RETAIN_ALL,          ec_reset_retain_all).
 
--define(EC_MVREGISTER,                ec_mvregister).
--define(EC_GCOUNTER,                  ec_gcounter).
--define(EC_PNCOUNTER,                 ec_pncounter).
--define(EC_AWORSET,                   ec_aworset).
--define(EC_RWORSET,                   ec_rworset).
--define(EC_EWFLAG,                    ec_ewflag).
--define(EC_DWFLAG,                    ec_dwflag).
-
 -define(EC_OPS_VAL,                   val).
 -define(EC_OPS_INC,                   inc).
 -define(EC_OPS_DEC,                   dec).
 -define(EC_OPS_ADD,                   add).
 -define(EC_OPS_RMV,                   rmv).
+-define(EC_OPS_PUT,                   put).
+-define(EC_OPS_ADD_CRDT,              add_crdt).
+-define(EC_OPS_MUT_CRDT,              mut_crdt).
 
 -define(EC_CAUSALLY_CONSISTENT,       causally_consistent).
 -define(EC_CAUSALLY_BEHIND,           causally_behind).
@@ -63,14 +81,20 @@
 -define(EC_RECONCILE,                 ec_reconcile).
 -define(EC_RECONCILED,                ec_reconciled).
 
--record(ec_dot,            {replica_id=undefined   :: term() | undefined,
-			    counter_max=0          :: non_neg_integer(),
-			    counter_min=0          :: non_neg_integer(),
-			    values=[]              :: list()}).
+-define(EC_DVV_CLEAN,                 ec_dvv_clean).
+-define(EC_DVV_DIRTY,                 ec_dvv_dirty).
 
--record(ec_dvv,            {module                 :: atom(),
-			    type                   :: atom(),
-			    option                 :: term(),
-			    dot_list=[]            :: list(),
-			    annonymus_list=[]      :: list()}).
+-define(EC_UNDEFINED,                 undefined).
+
+-record(ec_dot,            {replica_id=?EC_UNDEFINED :: term() | ?EC_UNDEFINED,
+			    counter_max=0            :: non_neg_integer(),
+			    counter_min=0            :: non_neg_integer(),
+			    values=[]                :: list()}).
+
+-record(ec_dvv,            {module                   :: atom(),
+			    type                     :: atom(),
+			    option                   :: term(),
+			    status=?EC_DVV_CLEAN     :: ?EC_DVV_CLEAN | ?EC_DVV_DIRTY,
+			    dot_list=[]              :: list(),
+			    annonymus_list=[]        :: list()}).
 
