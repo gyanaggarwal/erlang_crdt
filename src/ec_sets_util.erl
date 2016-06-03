@@ -24,7 +24,8 @@
 	 merge_map/2,
 	 causal_from_map/2,
 	 get_value_map/1,
-	 update_latest_entry/3]).
+	 update_latest_entry/3,
+	 pretty/1]).
 
 -include("erlang_crdt.hrl").
 
@@ -66,6 +67,20 @@ update_latest_entry(Map, Value1, Value2) ->
     [Key] = maps:keys(Map),
     maps:put(Key, sets:from_list([Value1, Value2]), Map).
 
+-spec pretty(V :: term()) -> term().
+pretty(V) ->
+    case is_map(V) of
+	true  ->
+	    maps:fold(fun(KX, VX, Acc) -> [{KX, pretty(VX)} | Acc] end, [], V);
+	false ->
+		case sets:is_set(V) of
+		    true  ->
+			sets:fold(fun(E, Acc) -> [pretty(E) | Acc] end, [], V);
+		    false ->
+			V
+	        end
+     end.
+	    
 % private function
 
 -spec put_inner_map(Key :: term(), ServerId :: term(), Index :: non_neg_integer(), Value :: term(), IMap :: maps:map()) -> maps:map().
@@ -78,7 +93,7 @@ put_inner_map(Key, ServerId, Index, Value, IMap) ->
 	        end,
     ValueMap9 = case maps:find(ServerId, ValueMap1) of
 		    error                                 ->
-			maps:from_list([{ServerId, {Index, Value}}]);
+			maps:put(ServerId, {Index, Value}, ValueMap1);
 		    {ok, {Index1, _}} when Index1 < Index ->
 			maps:put(ServerId, {Index, Value}, ValueMap1);
 		    {ok, _}                               ->

@@ -98,7 +98,7 @@ test1({Type, L11, L13, L15, L25}, Criteria, HFun, QFun) ->
     {DI11, DV11} = new(Type),
     {DI12, DV12} = mutate(L15, ec_dvv:join(DV11), DI11, DV11, x1),                    % DI12 is delta mutation for elements 1,2,3,4,5
     {DI13, DV13} = mutate(L11, ec_dvv:join(DV11), ec_gen_crdt:reset(DI12), DV12, x1), % DI13 is delta mutation for element 6
-    {DI14, DV14} = mutate(L13, ec_dvv:join(DV13), ec_gen_crdt:reset(DI13), DV13, x1), % DI14 is delta mutation for elements 7,8,9
+    {DI14, _V14} = mutate(L13, ec_dvv:join(DV13), ec_gen_crdt:reset(DI13), DV13, x1), % DI14 is delta mutation for elements 7,8,9
     
     {DI15, DV15} = mutate(L11, ec_dvv:join(DV11), DI12, DV12, x1),                    % DI15 is delta mutation for elements 1,2,3,4,5,6
     {DI16, DV16} = mutate(L13, ec_dvv:join(DV15), DI15, DV15, x1),                    % DI16 is delta mutation for elements 1,2,3,4,5,6,7,8,9
@@ -155,7 +155,7 @@ test_scrdt01(Type, QFun, [Ops1, Ops2, Ops3, Ops4, Ops5, Ops6]) ->
     DV14 = mutate_scrdt(Ops3, ec_dvv:join(DV13), DV13, UFun, QFun),
     DV15 = mutate_scrdt(Ops4, ec_dvv:join(DV11), DV14, UFun, QFun), % concurrent
     DV16 = mutate_scrdt(Ops5, ec_dvv:join(DV15), DV15, UFun, QFun),
-    DV17 = mutate_scrdt(Ops6, ec_dvv:join(DV11), DV16, UFun, QFun), % concurrent
+    _V17 = mutate_scrdt(Ops6, ec_dvv:join(DV11), DV16, UFun, QFun), % concurrent
     ok.
 
 make_scrdt(Type) ->
@@ -171,12 +171,6 @@ mutate_scrdt(Ops, DL11, DV11, UFun, QFun) ->
     io:fwrite("~p=~p~n", [Ops, QFun(ec_gen_crdt:query(DV12))]),
     DV12.
 
-query_map_fun(Map) ->
-    maps:fold(fun(K, V, Acc) -> [{K, sets:to_list(V)} | Acc] end, [], Map).
-
-query_set_fun(Set) ->		       
-    sets:to_list(Set).
-
 hide_fun(_X) ->
     ok.
 
@@ -188,13 +182,18 @@ get_fun(?EC_UNDEFINED) ->
 get_fun(Fun) ->
     Fun.
 
-out_ops({Tag, {Key, Value}}) ->
-    {Tag, {Key, sets:to_list(Value)}};
-out_ops({Tag, Key}) ->
-    {Tag, Key}.
+get_ormap01() ->
+    maps:from_list([{{x1,3,k11},sets:from_list([v112])},
+		    {{x1,5,k13},sets:from_list([v131])},
+		    {{x1,6,k13},sets:from_list([v132])},
+		    {{x1,9,k15},sets:from_list([v152])},
+		    {{x1,8,k15},sets:from_list([v151])},
+		    {{s2,1,k11},sets:from_list([v211])},
+		    {{s2,2,k12},sets:from_list([v221])},
+		    {{s2,3,k14},sets:from_list([v241])}]).
 
-out_map(#ec_dvv{dot_list=[#ec_dot{values=[{Ops, {V1, C1}}]}], annonymus_list=[{M2, V2, C2}]}) ->
-    {{out_ops(Ops), {sets:to_list(V1), sets:to_list(C1)}}, {query_map_fun(M2), sets:to_list(V2), sets:to_list(C2)}}.
+
+
 
 
 
