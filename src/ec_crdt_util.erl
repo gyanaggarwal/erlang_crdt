@@ -27,8 +27,8 @@
 -include("erlang_crdt.hrl").
 
 -spec add_param(DVV :: #ec_dvv{}, State :: #ec_dvv{}) -> #ec_dvv{}.
-add_param(DVV, #ec_dvv{module=Mod, type=Type, option=Option}) ->
-    DVV#ec_dvv{module=Mod, type=Type, option=Option}.
+add_param(DVV, #ec_dvv{module=Mod, type=Type, name=Name, option=Option}) ->
+    DVV#ec_dvv{module=Mod, type=Type, name=Name, option=Option}.
 
 -spec new_delta(Value :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 new_delta(Value, DL, State, ServerId) ->

@@ -63,8 +63,7 @@
 -define(EC_OPS_ADD,                   add).
 -define(EC_OPS_RMV,                   rmv).
 -define(EC_OPS_PUT,                   put).
--define(EC_OPS_ADD_CRDT,              add_crdt).
--define(EC_OPS_MUT_CRDT,              mut_crdt).
+-define(EC_OPS_MUTATE,                mutate).
 
 -define(EC_CAUSALLY_CONSISTENT,       causally_consistent).
 -define(EC_CAUSALLY_BEHIND,           causally_behind).
@@ -93,6 +92,7 @@
 
 -record(ec_dvv,            {module                   :: atom(),
 			    type                     :: atom(),
+			    name                     :: atom(),
 			    option                   :: term(),
 			    status=?EC_DVV_CLEAN     :: ?EC_DVV_CLEAN | ?EC_DVV_DIRTY,
 			    dot_list=[]              :: list(),

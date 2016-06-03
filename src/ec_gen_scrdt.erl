@@ -20,20 +20,22 @@
 
 -behavior(ec_gen_crdt).
 
--export([new_crdt/2,
+-export([new_crdt/3,
 	 delta_crdt/4,
 	 reconcile_crdt/3,
 	 update_fun_crdt/1,
 	 merge_fun_crdt/1,
 	 query_crdt/2,
 	 reset_crdt/1,
+	 mutated_crdt/1,
+	 causal_list_crdt/2,
 	 causal_consistent_crdt/4]).
 	 
 -include("erlang_crdt.hrl").
 
--spec new_crdt(Type :: atom(), Args :: term()) -> #ec_dvv{}.
-new_crdt(Type, Args) ->
-    #ec_dvv{module=?MODULE, type=Type, option=Args, annonymus_list=[new_annonymus_value(Type)]}. 
+-spec new_crdt(Type :: atom(), Name :: term(), Args :: term()) -> #ec_dvv{}.
+new_crdt(Type, Name, Args) ->
+    #ec_dvv{module=?MODULE, type=Type, name=Name, option=Args, annonymus_list=[new_annonymus_value(Type)]}. 
 
 -spec delta_crdt(Ops :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 delta_crdt(Ops, DL, #ec_dvv{module=?MODULE}=State, ServerId) ->
@@ -84,16 +86,28 @@ reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State) ->
     State1 = ec_crdt_util:reset(State, ?EC_RESET_ANNONYMUS_LIST),
     State1#ec_dvv{annonymus_list=[new_annonymus_value(Type)]}.
 
+-spec mutated_crdt(DVV :: #ec_dvv{}) -> #ec_dvv{}.
+mutated_crdt(DVV) ->
+    DVV.
+
+-spec causal_list_crdt(?EC_UNDEFINED, State :: #ec_dvv{}) -> list().
+causal_list_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE}=State) ->
+    ec_dvv:join(State).
+
 -spec causal_consistent_crdt(Delta :: #ec_dvv{}, State :: #ec_dvv{}, Offset :: non_neg_integer(), ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | 
 															 ?EC_CAUSALLY_AHEAD |
 															 ?EC_CAUSALLY_BEHIND.
-causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, option=Option}=Delta, 
-		       #ec_dvv{module=?MODULE, type=Type, option=Option}=State,
+causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=Delta, 
+		       #ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=State,
 		       Offset,
 		       ServerId) ->
     ec_dvv:causal_consistent(Delta, State, Offset, ServerId).
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> sets:set() | maps:map() | {ok, term()} | error.
+query_crdt([Criteria], #ec_dvv{module=?MODULE}=State)                                            ->
+    query_crdt(Criteria, State);
+query_crdt([], #ec_dvv{module=?MODULE}=State)                                                    ->
+    query_crdt(?EC_UNDEFINED, State);
 query_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE, type=?EC_AWORSET, annonymus_list=[{VSet, _}]}) ->
     ec_sets_util:get_value_set(VSet);
 query_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE, type=?EC_RWORSET, annonymus_list=[{VSet, _}]}) ->

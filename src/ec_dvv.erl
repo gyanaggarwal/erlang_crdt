@@ -30,6 +30,7 @@
 	 compare_causality/2,
 	 is_valid/1,
 	 is_clean/1,
+	 is_dirty/1,
 	 sort_dot_list/1,
 	 replace_dot_list/2,
 	 merge_default/3]).
@@ -126,6 +127,10 @@ is_valid(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
 -spec is_clean(Clock :: #ec_dvv{}) -> true | false.
 is_clean(#ec_dvv{status=Status}) ->
     Status =:= ?EC_DVV_CLEAN.
+
+-spec is_dirty(Clock :: #ec_dvv{}) -> true | false.
+is_dirty(#ec_dvv{status=Status}) ->
+    Status =:= ?EC_DVV_DIRTY.
 
 -spec sort_dot_list(DotList :: list()) -> list().
 sort_dot_list(DotList) ->			    

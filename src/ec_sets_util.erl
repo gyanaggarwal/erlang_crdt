@@ -27,8 +27,6 @@
 	 update_latest_entry/3,
 	 pretty/1]).
 
--include("erlang_crdt.hrl").
-
 -spec merge_set(D1 :: {sets:set(), sets:set()}, D2 :: {sets:set(), sets:set()}) -> {sets:set(), sets:set()}.
 merge_set({VSet1, CSet1}, {VSet2, CSet2}) ->
     merge({VSet1, CSet1},

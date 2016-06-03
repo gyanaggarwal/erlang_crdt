@@ -22,46 +22,46 @@
 
 -include("erlang_crdt.hrl").
 
-new(Type) ->
-    {ec_gen_crdt:new(Type), ec_gen_crdt:new(Type)}.
+new(Type, Name) ->
+    {ec_gen_crdt:new(Type, Name), ec_gen_crdt:new(Type, Name)}.
 
-mutate([Ops | T], DL0, DI0, DV0, ServerId) ->
+mutate([Ops | T], Args, DL0, DI0, DV0, ServerId) ->
     case ec_gen_crdt:mutate(Ops, DL0, DI0, DV0, ServerId) of
 	{error, _} ->
-	    mutate(T, DL0, DI0, DV0, ServerId);
+	    mutate(T, Args, DL0, DI0, DV0, ServerId);
 	{ok, DI1, DV1} ->
-	    mutate(T, ec_dvv:join(DV1), DI1, DV1, ServerId)
+	    mutate(T, Args, ec_gen_crdt:causal_list(Args, DV1), DI1, DV1, ServerId)
     end;
-mutate([], _, DI, DV, _) ->
+mutate([], _, _, DI, DV, _) ->
     {DI, DV}.
 
-data_mvregister() ->
+data_mvregister(Name) ->
     L11 = [{val, v111}],
     L13 = [{val, v131}, {val, v132}, {val, v133}],
     L15 = [{val, v151}, {val, v152}, {val, v153}, {val, v154}, {val, v155}],
     L25 = [{val, v231}, {val, v232}, {val, v233}, {val, v234}, {val, v255}],
-    {?EC_MVREGISTER, L11, L13, L15, L25}.
+    {?EC_MVREGISTER, Name, ?EC_UNDEFINED, L11, L13, L15, L25}.
 
-data_flag(Type, Value) ->    
+data_flag(Type, Name, Value) ->    
     L11 = [{val, Value}],
     L13 = [{val, (not Value)}, {val, Value}, {val, (not Value)}],
     L15 = [{val, Value}, {val, (not Value)}, {val, Value}, {val, (not Value)}, {val, Value}],
     L25 = [{val, (not Value)}, {val, Value}, {val, (not Value)}, {val, Value}, {val, (not Value)}],
-    {Type, L11, L13, L15, L25}.
+    {Type, Name, ?EC_UNDEFINED, L11, L13, L15, L25}.
 
-data_gcounter() ->    
+data_gcounter(Name) ->    
     L11 = [{inc, 111}],
     L13 = [{inc, 131}, {inc, 132}, {inc, 133}],
     L15 = [{inc, 151}, {inc, 152}, {inc, 153}, {inc, 154}, {inc, 155}],
     L25 = [{inc, 231}, {inc, 232}, {inc, 233}, {inc, 234}, {inc, 235}],
-    {?EC_GCOUNTER, L11, L13, L15, L25}.
+    {?EC_GCOUNTER, Name, ?EC_UNDEFINED, L11, L13, L15, L25}.
 
-data_pncounter() ->
+data_pncounter(Name) ->
     L11 = [{inc, 111}],
     L13 = [{inc, 131}, {dec, 132}, {inc, 133}],
     L15 = [{inc, 151}, {dec, 152}, {inc, 153}, {dec, 154}, {inc, 155}],
     L25 = [{dec, 231}, {inc, 232}, {dec, 233}, {inc, 234}, {dec, 235}],
-    {?EC_PNCOUNTER, L11, L13, L15, L25}.
+    {?EC_PNCOUNTER, Name, ?EC_UNDEFINED, L11, L13, L15, L25}.
 
 data_orset01(Type) ->    
     L11 = [{rmv, v13}],
@@ -70,19 +70,19 @@ data_orset01(Type) ->
     L25 = [{add, v11}, {add, v12}, {add, v14}, {add, v16}, {rmv, v16}],
     {Type, L11, L13, L15, L25}.
 
-data_orset02(Type) ->     
+data_orset02(Type, Name) ->     
     L11 = [{add, v12}],
     L13 = [{add, v14}, {rmv, v14}, {add, v15}],
     L15 = [{add, v11}, {rmv, v11}, {add, v11}, {add, v12}, {rmv, v12}],
     L25 = [{add, v11}, {add, v13}, {add, v14}, {add, v16}, {rmv, v16}],
-    {Type, L11, L13, L15, L25}.
+    {Type, Name, ?EC_UNDEFINED, L11, L13, L15, L25}.
 
-data_ormap01(Type) ->     
+data_ormap01(Type, Name) ->     
     L11 = [{rmv, k12}],
     L13 = [{put, {k14, v141}}, {rmv, k14}, {put, {k15, v151}}],
     L15 = [{put, {k11, v111}}, {rmv, k11}, {put, {k11, v112}}, {put, {k12, v121}}, {put, {k13, v131}}],
     L25 = [{put, {k11, v211}}, {put, {k12, v221}}, {put, {k14, v241}}, {put, {k16, v261}}, {rmv, k16}],
-    {Type, L11, L13, L15, L25}.
+    {Type, Name, ?EC_UNDEFINED, L11, L13, L15, L25}.
 
 test1(Data) ->
     test1(Data, ?EC_UNDEFINED, ?EC_UNDEFINED).
@@ -90,37 +90,37 @@ test1(Data) ->
 test1(Data, HFun, QFun) ->
     test1(Data, ?EC_UNDEFINED, HFun, QFun).
 
-test1({Type, L11, L13, L15, L25}, Criteria, HFun, QFun) ->
+test1({Type, Name, Args, L11, L13, L15, L25}, Criteria, HFun, QFun) ->
     HFun1 = get_fun(HFun),
     QFun1 = get_fun(QFun),
 
     % server x1
-    {DI11, DV11} = new(Type),
-    {DI12, DV12} = mutate(L15, ec_dvv:join(DV11), DI11, DV11, x1),                    % DI12 is delta mutation for elements 1,2,3,4,5
-    {DI13, DV13} = mutate(L11, ec_dvv:join(DV11), ec_gen_crdt:reset(DI12), DV12, x1), % DI13 is delta mutation for element 6
-    {DI14, _V14} = mutate(L13, ec_dvv:join(DV13), ec_gen_crdt:reset(DI13), DV13, x1), % DI14 is delta mutation for elements 7,8,9
+    {DI11, DV11} = new(Type, Name),
+    {DI12, DV12} = mutate(L15, Args, ec_gen_crdt:causal_list(Args, DV11), DI11, DV11, x1),                    % DI12 is delta mutation for elements 1,2,3,4,5
+    {DI13, DV13} = mutate(L11, Args, ec_gen_crdt:causal_list(Args, DV11), ec_gen_crdt:reset(DI12), DV12, x1), % DI13 is delta mutation for element 6
+    {DI14, _V14} = mutate(L13, Args, ec_gen_crdt:causal_list(Args, DV13), ec_gen_crdt:reset(DI13), DV13, x1), % DI14 is delta mutation for elements 7,8,9
     
-    {DI15, DV15} = mutate(L11, ec_dvv:join(DV11), DI12, DV12, x1),                    % DI15 is delta mutation for elements 1,2,3,4,5,6
-    {DI16, DV16} = mutate(L13, ec_dvv:join(DV15), DI15, DV15, x1),                    % DI16 is delta mutation for elements 1,2,3,4,5,6,7,8,9
+    {DI15, DV15} = mutate(L11, Args, ec_gen_crdt:causal_list(Args, DV11), DI12, DV12, x1),                    % DI15 is delta mutation for elements 1,2,3,4,5,6
+    {DI16, DV16} = mutate(L13, Args, ec_gen_crdt:causal_list(Args, DV15), DI15, DV15, x1),                    % DI16 is delta mutation for elements 1,2,3,4,5,6,7,8,9
     
     % server s2
-    {DI21, DV21} = new(Type),
-    {DI22, DV22} = mutate(L25, ec_dvv:join(DV21), DI21, DV21, s2),                    % DI22 is delta mutation for elements 1,2,3,4,5                    
-    
+    {DI21, DV21} = new(Type, Name),
+    {DI22, DV22} = mutate(L25, Args, ec_gen_crdt:causal_list(Args, DV21), DI21, DV21, s2),                    % DI22 is delta mutation for elements 1,2,3,4,5 
+              
     % updating s2 with incremental delta interval from x1
-    {ok, DV23}   = ec_gen_crdt:merge(DI12, DV22),                                     % updating server s2 with delta mutation DI12 from x1
-    {ok, DV24}   = ec_gen_crdt:merge(DI13, DV23),                                     % updating server s2 with delta mutation DI13 from x1
-    {ok, DV25}   = ec_gen_crdt:merge(DI14, DV24),                                     % updating server s2 with delta mutation DI14 from x1
+    {ok, DV23}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI12), DV22),                                        % updating server s2 with delta mutation DI12 from x1
+    {ok, DV24}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV23),                                        % updating server s2 with delta mutation DI13 from x1
+    {ok, DV25}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV24),                                        % updating server s2 with delta mutation DI14 from x1
     
     % updating s2 with one consolidated delta interval from x1
-    {ok, DV26}   = ec_gen_crdt:merge(DI16, DV22),                                     % updating server s2 with delta mutation DI16 from x1
+    {ok, DV26}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI16), DV22),                                        % updating server s2 with delta mutation DI16 from x1
 
     % updating x1 with delta interval from s2
-    {ok, DV17}   = ec_gen_crdt:merge(DI22, DV16),                                     % updating server x1 with delta mutation DI22 from s2
+    {ok, DV17}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI22), DV16),                                        % updating server x1 with delta mutation DI22 from s2
 
     % checking causality
-    R5           = ec_gen_crdt:merge(DI14, DV23),                                     % causally_ahead
-    R6           = ec_gen_crdt:merge(DI13, DV25),                                     % causally_behind
+    R5           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV23),                                        % delta interval causally_ahead
+    R6           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV25),                                        % delta interval causally_behind
 
     {HFun1(DV25), QFun1(ec_gen_crdt:query(Criteria, DV25)),
      HFun1(DV26), QFun1(ec_gen_crdt:query(Criteria, DV26)),

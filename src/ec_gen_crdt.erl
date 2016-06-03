@@ -20,7 +20,7 @@
 
 -include("erlang_crdt.hrl").
 
--callback new_crdt(Type :: atom(), Args :: term()) -> #ec_dvv{}.
+-callback new_crdt(Type :: atom(), Name :: term(), Args :: term()) -> #ec_dvv{}.
 
 -callback delta_crdt(Ops :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 
@@ -38,38 +38,48 @@
 
 -callback reset_crdt(State :: #ec_dvv{}) -> #ec_dvv{}.
 
--export([new/1,
-	 new/2,
+-callback mutated_crdt(DVV :: #ec_dvv{}) -> #ec_dvv{}.
+
+-callback causal_list_crdt({Type :: atom(), Name :: term()} | ?EC_UNDEFINED, State :: #ec_dvv{}) -> list().
+
+-export([new/2,
+	 new/3,
 	 merge/2,
 	 merge/3,
 	 mutate/5,
+	 mutated/1,
 	 query/1,
 	 query/2,
+	 causal_list/2,
 	 reset/1]).
 
--spec new(Type :: atom()) -> #ec_dvv{}.
-new(Type) ->
-    new(Type, ?EC_UNDEFINED).
+-spec new(Type :: atom(), Name :: term()) -> #ec_dvv{}.
+new(Type, Name) ->
+    new(Type, Name, ?EC_UNDEFINED).
 
--spec new(Type :: atom(), Args :: term()) -> #ec_dvv{}.
-new(Type, Args) ->
+-spec new(Type :: atom(), Name :: term(), Args :: term()) -> #ec_dvv{}.
+new(Type, Name, Args) ->
     Mod = ec_crdt_util:find_module(Type),
-    Mod:new_crdt(Type, Args).
+    Mod:new_crdt(Type, Name, Args).
+
+-spec causal_list({Type :: atom(), Name :: term()} | ?EC_UNDEFINED, State :: #ec_dvv{}) -> list().
+causal_list(Args, #ec_dvv{module=Mod}=State) ->
+    Mod:causal_list_crdt(Args, State).
 
 -spec merge(Delta :: #ec_dvv{}, State :: #ec_dvv{}) -> {ok, #ec_dvv{}} | {error, atom() | {atom(), #ec_dot{}}}.
-merge(#ec_dvv{module=Mod, type=Type, option=Option, dot_list=[#ec_dot{replica_id=ServerId}]}=Delta,
-      #ec_dvv{module=Mod, type=Type, option=Option}=State) ->
+merge(#ec_dvv{module=Mod, type=Type, name=Name, option=Option, dot_list=[#ec_dot{replica_id=ServerId}]}=Delta,
+      #ec_dvv{module=Mod, type=Type, name=Name, option=Option}=State) ->
     merge(Delta, State, ServerId);
-merge(#ec_dvv{module=Mod, type=Type, option=Option, dot_list=[]}, 
-      #ec_dvv{module=Mod, type=Type, option=Option}) ->
+merge(#ec_dvv{module=Mod, type=Type, name=Name, option=Option, dot_list=[]}, 
+      #ec_dvv{module=Mod, type=Type, name=Name, option=Option}) ->
     {error, ?EC_EMPTY_DELTA_INTERVAL};
-merge(#ec_dvv{module=Mod, type=Type, option=Option}, 
-     #ec_dvv{module=Mod, type=Type, option=Option}) ->
+merge(#ec_dvv{module=Mod, type=Type, name=Name, option=Option}, 
+      #ec_dvv{module=Mod, type=Type, name=Name, option=Option}) ->
     {error, ?EC_INCORRECT_DELTA_INTERVAL}.
 
 -spec merge(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term()) -> {ok, #ec_dvv{}} | {error, atom()}.
-merge(#ec_dvv{module=Mod, type=Type, option=Option}=Delta, 
-      #ec_dvv{module=Mod, type=Type, option=Option}=State, 
+merge(#ec_dvv{module=Mod, type=Type, name=Name, option=Option}=Delta, 
+      #ec_dvv{module=Mod, type=Type, name=Name, option=Option}=State, 
       ServerId) ->
     case Mod:causal_consistent_crdt(Delta, State, 1, ServerId) of
 	?EC_CAUSALLY_CONSISTENT ->
@@ -84,7 +94,11 @@ merge(#ec_dvv{module=Mod, type=Type, option=Option}=Delta,
     end.
 
 -spec mutate(Ops :: term(), DL :: list(), DI :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term()) -> {ok, {#ec_dvv{}, #ec_dvv{}}} | {error, atom()}.
-mutate(Ops, DL, #ec_dvv{module=Mod, type=Type, option=Option}=DI, #ec_dvv{module=Mod, type=Type, option=Option}=State, ServerId) ->
+mutate(Ops, 
+       DL, 
+       #ec_dvv{module=Mod, type=Type, name=Name, option=Option}=DI, 
+       #ec_dvv{module=Mod, type=Type, name=Name, option=Option}=State, 
+       ServerId) ->
     UpdateFun = Mod:update_fun_crdt([Type]),
     Delta = Mod:delta_crdt(Ops, DL, State, ServerId),
     case ec_dvv:is_valid(Delta) of
@@ -104,11 +118,11 @@ mutate(Ops, DL, #ec_dvv{module=Mod, type=Type, option=Option}=DI, #ec_dvv{module
 	    {error, ?EC_INVALID_OPERATION}
     end.
 
--spec query(State :: #ec_dvv{}) -> term().
+-spec query(State :: #ec_dvv{}) -> {error, ?EC_INVALID_OPERATION} | term().
 query(State) ->
     query(?EC_UNDEFINED, State).
 
--spec query(Criteria :: term(), State :: #ec_dvv{}) -> term().
+-spec query(Criteria :: term(), State :: #ec_dvv{}) -> {error, ?EC_INVALID_OPERATION} | term().
 query(Criteria, #ec_dvv{module=Mod}=State) ->
     Mod:query_crdt(Criteria, State).
 
@@ -116,11 +130,18 @@ query(Criteria, #ec_dvv{module=Mod}=State) ->
 reset(#ec_dvv{module=Mod}=DVV) ->
     DVV1 = Mod:reset_crdt(DVV),
     DVV1#ec_dvv{status=?EC_DVV_CLEAN}.
-			      
+			
+-spec mutated(DVV :: #ec_dvv{}) -> #ec_dvv{}.
+mutated(#ec_dvv{module=Mod}=DVV) ->      
+    Mod:mutated_crdt(DVV).
+
 % private function
 
 -spec update(Delta :: #ec_dvv{}, State :: #ec_dvv{}, UpdateFun :: {fun(), fun()}, ServerId :: term()) -> #ec_dvv{}.
-update(#ec_dvv{module=Mod, type=Type, option=Option}=Delta, #ec_dvv{module=Mod, type=Type, option=Option}=State, UpdateFun, ServerId) ->
+update(#ec_dvv{module=Mod, type=Type, name=Name, option=Option}=Delta, 
+       #ec_dvv{module=Mod, type=Type, name=Name, option=Option}=State, 
+       UpdateFun, 
+       ServerId) ->
     State1 = ec_dvv:update(Delta, State, UpdateFun, ServerId),
     State2 = ec_crdt_util:add_param(State1, State),
     State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_RECONCILE_LOCAL),
