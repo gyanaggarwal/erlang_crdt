@@ -66,6 +66,8 @@ update_latest_entry(Map, Value1, Value2) ->
     maps:put(Key, sets:from_list([Value1, Value2]), Map).
 
 -spec pretty(V :: term()) -> term().
+pretty({ok, V}) ->
+    pretty(V);
 pretty(V) ->
     case is_map(V) of
 	true  ->

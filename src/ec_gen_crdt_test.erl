@@ -97,21 +97,19 @@ data_compmap01() ->
     L25 = [{mutate, {{?EC_MVREGISTER, mvc1}, {val, v251}}}, 
 	   {mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 4}}}, 
 	   {mutate, {{?EC_AWORSET,    awc1}, {add, v253}}}, 
-	   {mutate, {{?EC_GCOUNTER,   gcs2}, {inc, 7}}}, 
-	   {mutate, {{?EC_PWORMAP,    pws2}, {put, {k11, v255}}}}],
+	   {mutate, {{?EC_PWORMAP,    pws2}, {put, {k11, v254}}}}, 
+	   {mutate, {{?EC_PWORMAP,    pws2}, {put, {k12, v255}}}}],
     {?EC_COMPMAP, ?EC_UNDEFINED, L11, L13, L15, L25}. 
     
-test1(Data) ->
-    test1(Data, ?EC_UNDEFINED).
+query_test0(Data) ->
+    query_test0(Data, ?EC_UNDEFINED).
 
-test1(Data, QFun) ->
-    test1(Data, ?EC_UNDEFINED, QFun).
+query_test0({DV1, DV2, DV3, _R1, _R2}, Criteria) ->
+    {ec_sets_util:pretty(ec_gen_crdt:query(Criteria, DV1)), 
+     ec_sets_util:pretty(ec_gen_crdt:query(Criteria, DV2)), 
+     ec_sets_util:pretty(ec_gen_crdt:query(Criteria, DV3))}.
 
-test1({DV1, DV2, DV3, _R1, _R2}, Criteria, QFun) ->
-    QFun1 = get_fun(QFun),
-    {QFun1(ec_gen_crdt:query(Criteria, DV1)), QFun1(ec_gen_crdt:query(Criteria, DV2)), QFun1(ec_gen_crdt:query(Criteria, DV3))}.
-
-test0({Type, Name, L11, L13, L15, L25}) ->
+run_test0({Type, Name, L11, L13, L15, L25}) ->
     % server x1
     {DI11, DV11} = new(Type, Name),
     {DI12, DV12} = mutate(L15, DI11, DV11, x1),                        % DI12 is delta mutation for elements 1,2,3,4,5
