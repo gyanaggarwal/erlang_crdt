@@ -22,6 +22,9 @@
 	 new_delta/4,
 	 find_dot/2,
 	 find_module/1,
+	 is_dirty/1,
+	 is_state/1,
+	 is_valid/1,
 	 reset/2]).
 
 -include("erlang_crdt.hrl").
@@ -64,6 +67,20 @@ find_module(Type) ->
 	{ok, Mod} ->
 	    Mod
     end.
+
+-spec is_valid(DVV :: #ec_dvv{} | ?EC_UNDEFINED) -> true | false.
+is_valid(?EC_UNDEFINED) ->    
+    false;
+is_valid(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
+    lists:foldl(fun(#ec_dot{values=VS}, Flag) -> Flag orelse length(VS) > 0 end, length(AL) > 0, DL).
+
+-spec is_dirty(DVV :: #ec_dvv{}) -> true | false.
+is_dirty(#ec_dvv{status=Status}) ->
+    Status =:= ?EC_DVV_DIRTY_STATE orelse Status =:= ?EC_DVV_DIRTY_DELTA.
+
+-spec is_state(DVV :: #ec_dvv{}) -> true | false.
+is_state(#ec_dvv{status=Status}) ->
+    Status =:= ?EC_DVV_DIRTY_STATE orelse Status =:= ?EC_DVV_CLEAN_STATE.
 
 % private function
 

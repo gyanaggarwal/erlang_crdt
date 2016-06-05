@@ -75,26 +75,29 @@
 -define(EC_INCORRECT_DELTA_INTERVAL,  incorrect_delta_interval).
 -define(EC_EMPTY_DELTA_INTERVAL,      empty_delta_interval).
 
--define(EC_RECONCILE_LOCAL,           ec_reconcile_local).
--define(EC_RECONCILE_GLOBAL,          ec_reconcile_global).
+-define(EC_LOCAL,                     ec_local).
+-define(EC_GLOBAL,                    ec_global).
+
 -define(EC_RECONCILE,                 ec_reconcile).
 -define(EC_RECONCILED,                ec_reconciled).
 
--define(EC_DVV_CLEAN,                 ec_dvv_clean).
--define(EC_DVV_DIRTY,                 ec_dvv_dirty).
+-define(EC_DVV_CLEAN_STATE,           dvv_clean_state).
+-define(EC_DVV_DIRTY_STATE,           dvv_dirty_state).
+-define(EC_DVV_CLEAN_DELTA,           dvv_clean_delta).
+-define(EC_DVV_DIRTY_DELTA,           dvv_dirty_delta).
 
 -define(EC_UNDEFINED,                 undefined).
 
--record(ec_dot,            {replica_id=?EC_UNDEFINED :: term() | ?EC_UNDEFINED,
-			    counter_max=0            :: non_neg_integer(),
-			    counter_min=0            :: non_neg_integer(),
-			    values=[]                :: list()}).
+-record(ec_dot,            {replica_id=?EC_UNDEFINED   :: term() | ?EC_UNDEFINED,
+			    counter_max=0              :: non_neg_integer(),
+			    counter_min=0              :: non_neg_integer(),
+			    values=[]                  :: list()}).
 
--record(ec_dvv,            {module                   :: atom(),
-			    type                     :: atom(),
-			    name                     :: atom(),
-			    option                   :: term(),
-			    status=?EC_DVV_CLEAN     :: ?EC_DVV_CLEAN | ?EC_DVV_DIRTY,
-			    dot_list=[]              :: list(),
-			    annonymus_list=[]        :: list()}).
+-record(ec_dvv,            {module                     :: atom(),
+			    type                       :: atom(),
+			    name                       :: atom(),
+			    option                     :: term(),
+			    status=?EC_DVV_CLEAN_STATE :: ?EC_DVV_CLEAN_STATE | ?EC_DVV_DIRTY_STATE | ?EC_DVV_CLEAN_DELTA | ?EC_DVV_DIRTY_DELTA,
+			    dot_list=[]                :: list(),
+			    annonymus_list=[]          :: list()}).
 

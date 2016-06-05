@@ -29,7 +29,7 @@
 	 reset_crdt/1,
 	 mutated_crdt/1,
 	 causal_list_crdt/2,
-	 causal_consistent_crdt/4]).
+	 causal_consistent_crdt/5]).
 	 
 -include("erlang_crdt.hrl").
 
@@ -47,8 +47,8 @@ delta_crdt(Ops, DL, #ec_dvv{module=?MODULE}=State, ServerId) ->
 	    ec_crdt_util:new_delta(Value, DL, State, ServerId)
     end.
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_RECONCILE_LOCAL | ?EC_RECONCILE_GLOBAL) -> #ec_dvv{}.
-reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[AD1]}=State, ServerId, ?EC_RECONCILE_LOCAL) ->
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> #ec_dvv{}.
+reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[AD1]}=State, ServerId, ?EC_LOCAL) ->
     Dot1 = ec_crdt_util:find_dot(State, ServerId),
     {Tag, V9} = case Dot1#ec_dot.values of
 		    [V1]     ->
@@ -61,16 +61,16 @@ reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[
 	      ?EC_RECONCILED ->
 		  AD1;
 	      ?EC_RECONCILE  ->
-		  reconcile(Type, ?EC_RECONCILE_LOCAL, V9, AD1)
+		  reconcile(Type, ?EC_LOCAL, V9, AD1)
           end,
 
     Dot9 = Dot1#ec_dot{values=[V9]},
     DL9 = ec_dvv:replace_dot_list(DL1, Dot9),
     State#ec_dvv{dot_list=DL9, annonymus_list=[AD9]};
-reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_RECONCILE_GLOBAL) ->			     
-    D3 = reconcile(Type, ?EC_RECONCILE_GLOBAL, D1, D2),
+reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_GLOBAL) ->			     
+    D3 = reconcile(Type, ?EC_GLOBAL, D1, D2),
     State#ec_dvv{annonymus_list=[D3]};
-reconcile_crdt(State, _ServerId, ?EC_RECONCILE_GLOBAL) ->
+reconcile_crdt(State, _ServerId, ?EC_GLOBAL) ->
     State.
 
 -spec update_fun_crdt(Args :: list()) -> {fun(), fun()}.
@@ -90,18 +90,26 @@ reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State) ->
 mutated_crdt(DVV) ->
     DVV.
 
--spec causal_list_crdt(?EC_UNDEFINED, State :: #ec_dvv{}) -> list().
-causal_list_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE}=State) ->
+-spec causal_list_crdt(Ops :: term(), State :: #ec_dvv{}) -> list().
+causal_list_crdt(_Ops, #ec_dvv{module=?MODULE}=State) ->
     ec_dvv:join(State).
 
--spec causal_consistent_crdt(Delta :: #ec_dvv{}, State :: #ec_dvv{}, Offset :: non_neg_integer(), ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | 
-															 ?EC_CAUSALLY_AHEAD |
-															 ?EC_CAUSALLY_BEHIND.
+-spec causal_consistent_crdt(Delta :: #ec_dvv{}, 
+			     State :: #ec_dvv{}, 
+			     Offset :: non_neg_integer(), 
+			     ServerId :: term(),
+			     Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> ?EC_CAUSALLY_CONSISTENT | list().
 causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=Delta, 
 		       #ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=State,
 		       Offset,
-		       ServerId) ->
-    ec_dvv:causal_consistent(Delta, State, Offset, ServerId).
+		       ServerId,
+		       _Flag) ->
+    case ec_dvv:causal_consistent(Delta, State, Offset, ServerId) of
+	?EC_CAUSALLY_CONSISTENT ->
+	    ?EC_CAUSALLY_CONSISTENT;
+	Reason                  ->
+	    [Reason]
+    end.
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> sets:set() | maps:map() | {ok, term()} | error.
 query_crdt([Criteria], #ec_dvv{module=?MODULE}=State)                                            ->
@@ -175,24 +183,24 @@ new_annonymus_value(Type) ->
     end.
 
 -spec reconcile(Type :: ?EC_AWORSET | ?EC_RWORSET | ?EC_PWORMAP | ?EC_RWORMAP,
-		Flag :: ?EC_RECONCILE_LOCAL | ?EC_RECONCILE_GLOBAL,
+		Flag :: ?EC_LOCAL | ?EC_GLOBAL,
 		V1 :: term(),
 		V2 :: term()) -> {maps:map() | sets:set(), sets:set()}.
-reconcile(?EC_AWORSET, ?EC_RECONCILE_LOCAL, {_, {V1, C1}}, {V2, C2}) ->
+reconcile(?EC_AWORSET, ?EC_LOCAL, {_, {V1, C1}}, {V2, C2}) ->
     ec_sets_util:merge_set({V1, C1}, {V2, C2});
-reconcile(?EC_RWORSET, ?EC_RECONCILE_LOCAL, {_, {V1, C1}}, {V2, C2}) ->
+reconcile(?EC_RWORSET, ?EC_LOCAL, {_, {V1, C1}}, {V2, C2}) ->
     ec_sets_util:merge_set({V1, C1}, {V2, C2});
-reconcile(?EC_AWORSET, ?EC_RECONCILE_GLOBAL, {V1, C1}, {V2, C2})     ->
+reconcile(?EC_AWORSET, ?EC_GLOBAL, {V1, C1}, {V2, C2})     ->
     ec_sets_util:merge_set({V1, C1}, {V2, C2});
-reconcile(?EC_RWORSET, ?EC_RECONCILE_GLOBAL, {V1, C1}, {V2, C2})     ->
+reconcile(?EC_RWORSET, ?EC_GLOBAL, {V1, C1}, {V2, C2})     ->
     ec_sets_util:merge_set({V1, C1}, {V2, C2});
-reconcile(?EC_PWORMAP, ?EC_RECONCILE_LOCAL, {_, {V1, C1}}, {V2, C2}) ->
+reconcile(?EC_PWORMAP, ?EC_LOCAL, {_, {V1, C1}}, {V2, C2}) ->
     ec_sets_util:merge_map({V1, C1}, {V2, C2});
-reconcile(?EC_RWORMAP, ?EC_RECONCILE_LOCAL, {_, {V1, C1}}, {V2, C2}) ->
+reconcile(?EC_RWORMAP, ?EC_LOCAL, {_, {V1, C1}}, {V2, C2}) ->
     ec_sets_util:merge_map({V1, C1}, {V2, C2});
-reconcile(?EC_PWORMAP, ?EC_RECONCILE_GLOBAL, {V1, C1}, {V2, C2}) ->
+reconcile(?EC_PWORMAP, ?EC_GLOBAL, {V1, C1}, {V2, C2}) ->
     ec_sets_util:merge_map({V1, C1}, {V2, C2});
-reconcile(?EC_RWORMAP, ?EC_RECONCILE_GLOBAL, {V1, C1}, {V2, C2}) ->
+reconcile(?EC_RWORMAP, ?EC_GLOBAL, {V1, C1}, {V2, C2}) ->
     ec_sets_util:merge_map({V1, C1}, {V2, C2}).
 
 -spec next_counter_value(State :: #ec_dvv{}, ServerId :: term()) -> non_neg_integer().
@@ -227,9 +235,3 @@ rmv_value_set(Value, VSet) ->
 -spec rmv_value_map(Key :: term(), VMap :: maps:map()) -> {maps:map(), sets:set()}.
 rmv_value_map(Key, VMap) ->    
    {maps:new(), ec_sets_util:causal_from_map(Key, VMap)}.
-
-
-
-
-
-

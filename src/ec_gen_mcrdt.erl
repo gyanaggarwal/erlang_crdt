@@ -29,7 +29,7 @@
 	 reset_crdt/1,
 	 mutated_crdt/1,
 	 causal_list_crdt/2,
-	 causal_consistent_crdt/4,
+	 causal_consistent_crdt/5,
 	 add_gcounter/3,
 	 add_pncounter/3,
 	 merge_pncounter/3,
@@ -47,28 +47,25 @@ new_crdt(Type, Name, Args) ->
 delta_crdt(Ops, DL, #ec_dvv{module=?MODULE, type=Type}=State, ServerId) ->
     ec_crdt_util:new_delta(new_value(Ops, Type), DL, State, ServerId).
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_RECONCILE_LOCAL | ?EC_RECONCILE_GLOBAL) -> #ec_dvv{}.
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> #ec_dvv{}.
 reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, _Flag) ->
     State.
 
--spec causal_consistent_crdt(Delta :: #ec_dvv{}, State :: #ec_dvv{}, Offset :: non_neg_integer(), ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT |
-															 ?EC_CAUSALLY_AHEAD |
-															 ?EC_CAUSALLY_BEHIND.
+-spec causal_consistent_crdt(Delta :: #ec_dvv{}, 
+			     State :: #ec_dvv{}, 
+			     Offset :: non_neg_integer(), 
+			     ServerId :: term(),
+			     Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> ?EC_CAUSALLY_CONSISTENT | list().
 causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=Delta, 
 		       #ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=State,
 		       Offset,
-		       ServerId) ->
-    case Type of
-	?EC_MVREGISTER ->
-	    ec_dvv:causal_consistent(Delta, State, Offset, ServerId);
-	?EC_EWFLAG     ->
-	    ec_dvv:causal_consistent(Delta, State, Offset, ServerId);
-	?EC_DWFLAG     ->
-	    ec_dvv:causal_consistent(Delta, State, Offset, ServerId);
-	?EC_GCOUNTER   ->
-	    ec_dvv:causal_consistent(Delta, State, Offset, ServerId);
-	?EC_PNCOUNTER  ->
-	    ec_dvv:causal_consistent(Delta, State, Offset, ServerId)
+		       ServerId,
+		       _Flag) ->
+    case ec_dvv:causal_consistent(Delta, State, Offset, ServerId) of
+	?EC_CAUSALLY_CONSISTENT ->
+	    ?EC_CAUSALLY_CONSISTENT;
+	Reason                  ->
+	    [Reason]
     end.
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> term().
@@ -108,8 +105,8 @@ reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State) ->
 mutated_crdt(DVV) ->
     DVV.
 
--spec causal_list_crdt(?EC_UNDEFINED, State :: #ec_dvv{}) -> list().
-causal_list_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE}=State) ->    
+-spec causal_list_crdt(Ops :: term(), State :: #ec_dvv{}) -> list().
+causal_list_crdt(_Ops, #ec_dvv{module=?MODULE}=State) ->    
     ec_dvv:join(State).
 
 -spec update_fun_crdt(Args :: list()) -> {fun(), fun()}.

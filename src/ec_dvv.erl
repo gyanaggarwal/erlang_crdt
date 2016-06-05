@@ -28,9 +28,6 @@
 	 join/1,
 	 causal_consistent/4,
 	 compare_causality/2,
-	 is_valid/1,
-	 is_clean/1,
-	 is_dirty/1,
 	 sort_dot_list/1,
 	 replace_dot_list/2,
 	 merge_default/3]).
@@ -85,13 +82,20 @@ join(#ec_dvv{dot_list=DL}) ->
 -spec causal_consistent(Clock1 :: #ec_dvv{} | ?EC_UNDEFINED, 
 			Clock2 :: #ec_dvv{} | ?EC_UNDEFINED, 
 			OffSet :: non_neg_integer(), 
-			ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | ?EC_CAUSALLY_BEHIND | ?EC_CAUSALLY_AHEAD.
+			ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | ?EC_CAUSALLY_BEHIND | {?EC_CAUSALLY_AHEAD, term()}.
 causal_consistent(?EC_UNDEFINED, ?EC_UNDEFINED, _Offset, _ServerId) ->
     ?EC_CAUSALLY_CONSISTENT;
 causal_consistent(?EC_UNDEFINED, #ec_dvv{}, _Offset, _ServerId) ->
     ?EC_CAUSALLY_BEHIND;
-causal_consistent(#ec_dvv{}, ?EC_UNDEFINED, _Offset, _ServerId) ->
-    ?EC_CAUSALLY_AHEAD;
+causal_consistent(#ec_dvv{dot_list=DDL}, ?EC_UNDEFINED, _Offset, ServerId) ->
+    case lists:keyfind(ServerId, #ec_dot.replica_id, DDL) of
+	false                  ->
+	    ?EC_CAUSALLY_CONSISTENT;
+	#ec_dot{counter_min=1} ->
+	    ?EC_CAUSALLY_CONSISTENT;
+	_                      ->
+	    {?EC_CAUSALLY_AHEAD, ?EC_DOT_DOES_NOT_EXIST}
+    end;
 causal_consistent(#ec_dvv{dot_list=DDL}, #ec_dvv{dot_list=SDL}, Offset, ServerId) ->
     case {lists:keyfind(ServerId, #ec_dot.replica_id, DDL), lists:keyfind(ServerId, #ec_dot.replica_id, SDL)} of
 	{false, _}                                                               ->
@@ -99,8 +103,8 @@ causal_consistent(#ec_dvv{dot_list=DDL}, #ec_dvv{dot_list=SDL}, Offset, ServerId
 	{#ec_dot{counter_min=1}, false}                                          ->
 	    ?EC_CAUSALLY_CONSISTENT;
 	{#ec_dot{}, false}                                                       ->
-	    ?EC_CAUSALLY_AHEAD;
-	{#ec_dot{counter_max=Max1, counter_min=Min1}, #ec_dot{counter_max=Max2}} ->
+	    {?EC_CAUSALLY_AHEAD, ?EC_DOT_DOES_NOT_EXIST};
+	{#ec_dot{counter_max=Max1, counter_min=Min1}, #ec_dot{counter_max=Max2}=Dot2} ->
 	    case (Max2 >= Min1) of
 		true  ->
 		    case (Max2 =< (Max1-Offset)) of
@@ -110,27 +114,13 @@ causal_consistent(#ec_dvv{dot_list=DDL}, #ec_dvv{dot_list=SDL}, Offset, ServerId
 			    ?EC_CAUSALLY_BEHIND
 	            end;
 		false  ->
-		    ?EC_CAUSALLY_AHEAD
+		    {?EC_CAUSALLY_AHEAD, Dot2#ec_dot{values=[]}}
 	    end
     end.
 
 -spec compare_causality(Clock1 :: #ec_dvv{}, Clock2 :: #ec_dvv{}) -> ?EC_EQUAL | ?EC_MORE | ?EC_LESS | ?EC_CONCURRENT.
 compare_causality(#ec_dvv{dot_list=DL1}, #ec_dvv{dot_list=DL2}) ->
     compare_causality(sort_dot_list(DL1), sort_dot_list(DL2), ?EC_EQUAL).
-
--spec is_valid(Clock :: #ec_dvv{} | ?EC_UNDEFINED) -> true | false.
-is_valid(?EC_UNDEFINED) ->
-    false;
-is_valid(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
-    lists:foldl(fun(#ec_dot{values=VS}, Flag) -> Flag orelse length(VS) > 0 end, length(AL) > 0, DL).
-
--spec is_clean(Clock :: #ec_dvv{}) -> true | false.
-is_clean(#ec_dvv{status=Status}) ->
-    Status =:= ?EC_DVV_CLEAN.
-
--spec is_dirty(Clock :: #ec_dvv{}) -> true | false.
-is_dirty(#ec_dvv{status=Status}) ->
-    Status =:= ?EC_DVV_DIRTY.
 
 -spec sort_dot_list(DotList :: list()) -> list().
 sort_dot_list(DotList) ->			    
