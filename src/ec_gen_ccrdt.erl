@@ -24,7 +24,7 @@
 
 -export([new_crdt/3,
          delta_crdt/4,
-         reconcile_crdt/3,
+         reconcile_crdt/4,
          update_fun_crdt/1,
          merge_fun_crdt/1,
          query_crdt/2,
@@ -45,20 +45,20 @@ delta_crdt({?EC_OPS_MUTATE, {{Type, Name}, Ops}}, DL, #ec_dvv{module=?MODULE, an
     Value = Mod:delta_crdt(Ops, DL, DVV, ServerId),
     ec_crdt_util:new_delta(Value, ec_dvv:join(State), State, ServerId).
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> #ec_dvv{}.
-reconcile_crdt(#ec_dvv{module=?MODULE, dot_list=DL1, annonymus_list=[CMap1]}=State, ServerId, ?EC_LOCAL) ->
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: atom()) -> #ec_dvv{}.
+reconcile_crdt(#ec_dvv{module=?MODULE, dot_list=DL1, annonymus_list=[CMap1]}=State, ServerId, ?EC_LOCAL, DataStatus) ->
     #ec_dot{replica_id=ServerId, values=[#ec_dvv{type=Type1, name=Name1}=DVV1]} = Dot1 = ec_crdt_util:find_dot(DL1, ServerId),
     case ec_crdt_util:is_valid(DVV1) of
 	true  ->
 	    DVV3 = find_dvv({Type1, Name1}, CMap1),
-	    DVV4 = ec_gen_crdt:update(DVV1, DVV3, ServerId),
+	    DVV4 = ec_gen_crdt:update(DVV1, DVV3, ServerId, DataStatus),
 	    CMap2 = maps:put({Type1, Name1}, DVV4, CMap1),
 	    DL2 = ec_dvv:replace_dot_list(DL1, Dot1#ec_dot{values=[]}),
 	    State#ec_dvv{dot_list=DL2, annonymus_list=[CMap2]};
 	false ->
 	    State
     end;
-reconcile_crdt(#ec_dvv{module=?MODULE, annonymus_list=AL}=State, ServerId, ?EC_GLOBAL) ->
+reconcile_crdt(#ec_dvv{module=?MODULE, annonymus_list=AL}=State, ServerId, ?EC_GLOBAL, _DataStatus) ->
     case AL of
 	[CMap1, CMap2] ->
 	    CMap3 = maps:fold(fun(K, V, Acc) -> merge_map_fun(K, V, Acc, ServerId) end, CMap2, CMap1),
@@ -150,7 +150,8 @@ merge_map_fun({Type1, Name1}, #ec_dvv{module=Mod, type=Type1, name=Name1, option
 		     error ->
 			 {ok, DVV1};
 		     {ok, #ec_dvv{module=Mod, type=Type1, name=Name1, option=Option}=DVV2} ->
-			 ec_gen_crdt:merge(DVV1, DVV2, ServerId)
+			 {DVV11, DVV21} = ec_crdt_util:delta_state_pair({DVV1, DVV2}),
+			 ec_gen_crdt:merge(DVV11, DVV21, ServerId)
                  end,
     maps:put({Type1, Name1}, DVV3, CMap2).
 

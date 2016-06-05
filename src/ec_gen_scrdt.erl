@@ -22,7 +22,7 @@
 
 -export([new_crdt/3,
 	 delta_crdt/4,
-	 reconcile_crdt/3,
+	 reconcile_crdt/4,
 	 update_fun_crdt/1,
 	 merge_fun_crdt/1,
 	 query_crdt/2,
@@ -47,8 +47,8 @@ delta_crdt(Ops, DL, #ec_dvv{module=?MODULE}=State, ServerId) ->
 	    ec_crdt_util:new_delta(Value, DL, State, ServerId)
     end.
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> #ec_dvv{}.
-reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[AD1]}=State, ServerId, ?EC_LOCAL) ->
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: atom()) -> #ec_dvv{}.
+reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[AD1]}=State, ServerId, ?EC_LOCAL, _DataStatus) ->
     Dot1 = ec_crdt_util:find_dot(State, ServerId),
     {Tag, V9} = case Dot1#ec_dot.values of
 		    [V1]     ->
@@ -67,10 +67,10 @@ reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[
     Dot9 = Dot1#ec_dot{values=[V9]},
     DL9 = ec_dvv:replace_dot_list(DL1, Dot9),
     State#ec_dvv{dot_list=DL9, annonymus_list=[AD9]};
-reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_GLOBAL) ->			     
+reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_GLOBAL, _DataStatus) ->			     
     D3 = reconcile(Type, ?EC_GLOBAL, D1, D2),
     State#ec_dvv{annonymus_list=[D3]};
-reconcile_crdt(State, _ServerId, ?EC_GLOBAL) ->
+reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, ?EC_GLOBAL, _DataStatus) ->
     State.
 
 -spec update_fun_crdt(Args :: list()) -> {fun(), fun()}.

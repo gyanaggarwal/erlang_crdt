@@ -24,7 +24,7 @@
 
 -callback delta_crdt(Ops :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 
--callback reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> #ec_dvv{}.
+-callback reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: atom()) -> #ec_dvv{}.
 
 -callback update_fun_crdt(Args :: list()) -> {fun(), fun()}.
 
@@ -52,7 +52,7 @@
 	 mutated/1,
 	 query/1,
 	 query/2,
-	 update/3,
+	 update/4,
 	 causal_list/2,
 	 reset/1]).
 
@@ -88,7 +88,7 @@ merge(#ec_dvv{module=Mod, type=Type, name=Name, option=Option}=Delta,
 	?EC_CAUSALLY_CONSISTENT ->
 	    State1 = ec_dvv:sync([Delta, State], Mod:merge_fun_crdt([Type])),
 	    State2 = ec_crdt_util:add_param(State1, State),
-	    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_GLOBAL),
+	    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_GLOBAL, ?EC_DVV_DIRTY_STATE),
 	    {ok, ec_crdt_util:add_param(State3#ec_dvv{status=?EC_DVV_DIRTY_STATE}, State)};
 	Reason                  ->
 	    {error, Reason}
@@ -106,8 +106,8 @@ mutate(Ops,
 	    Delta1 = Delta#ec_dvv{status=?EC_DVV_DIRTY_DELTA},
 	    case Mod:causal_consistent_crdt(Delta1, State, 0, ServerId, ?EC_LOCAL) of
 		?EC_CAUSALLY_CONSISTENT ->
-		    State1 = update(Delta1, State, ServerId),
-		    DI1    = update(Delta1, DI,    ServerId),
+		    State1 = update(Delta1, State, ServerId, ?EC_DVV_DIRTY_STATE),
+		    DI1    = update(Delta1, DI,    ServerId, ?EC_DVV_DIRTY_DELTA),
 		    {ok, DI1, State1};
 		Reason                  ->
 		    {error, Reason}
@@ -133,14 +133,15 @@ reset(#ec_dvv{module=Mod}=DVV) ->
 mutated(#ec_dvv{module=Mod}=DVV) ->      
     Mod:mutated_crdt(DVV).
 
--spec update(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+-spec update(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), DataStatus :: atom()) -> #ec_dvv{}.
 update(#ec_dvv{module=Mod, type=Type, name=Name, option=Option}=Delta, 
        #ec_dvv{module=Mod, type=Type, name=Name, option=Option}=State, 
-       ServerId) ->
+       ServerId,
+       DataStatus) ->
     State1 = ec_dvv:update(Delta, State, Mod:update_fun_crdt([Type]), ServerId),
     State2 = ec_crdt_util:add_param(State1, State),
-    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_LOCAL),
-    ec_crdt_util:add_param(State3#ec_dvv{status=?EC_DVV_DIRTY_STATE}, State).
+    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_LOCAL, DataStatus),
+    ec_crdt_util:add_param(State3#ec_dvv{status=DataStatus}, State).
 
 
 

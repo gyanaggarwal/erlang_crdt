@@ -25,6 +25,7 @@
 	 is_dirty/1,
 	 is_state/1,
 	 is_valid/1,
+	 delta_state_pair/1,
 	 reset/2]).
 
 -include("erlang_crdt.hrl").
@@ -81,6 +82,15 @@ is_dirty(#ec_dvv{status=Status}) ->
 -spec is_state(DVV :: #ec_dvv{}) -> true | false.
 is_state(#ec_dvv{status=Status}) ->
     Status =:= ?EC_DVV_DIRTY_STATE orelse Status =:= ?EC_DVV_CLEAN_STATE.
+
+-spec delta_state_pair({Delta :: #ec_dvv{}, State :: #ec_dvv{}}) -> {#ec_dvv{}, #ec_dvv{}}.
+delta_state_pair({Delta, State}) ->
+    case is_state(State) of
+	true  ->
+	    {Delta, State};
+	false ->
+	    {State, Delta}
+    end.
 
 % private function
 
