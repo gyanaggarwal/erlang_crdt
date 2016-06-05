@@ -47,7 +47,7 @@ delta_crdt(Ops, DL, #ec_dvv{module=?MODULE}=State, ServerId) ->
 	    ec_crdt_util:new_delta(Value, DL, State, ServerId)
     end.
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: atom()) -> #ec_dvv{}.
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: term()) -> #ec_dvv{}.
 reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[AD1]}=State, ServerId, ?EC_LOCAL, _DataStatus) ->
     Dot1 = ec_crdt_util:find_dot(State, ServerId),
     {Tag, V9} = case Dot1#ec_dot.values of

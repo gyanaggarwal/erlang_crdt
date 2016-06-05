@@ -24,7 +24,7 @@
 
 -callback delta_crdt(Ops :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 
--callback reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: atom()) -> #ec_dvv{}.
+-callback reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: term()) -> #ec_dvv{}.
 
 -callback update_fun_crdt(Args :: list()) -> {fun(), fun()}.
 
@@ -133,7 +133,7 @@ reset(#ec_dvv{module=Mod}=DVV) ->
 mutated(#ec_dvv{module=Mod}=DVV) ->      
     Mod:mutated_crdt(DVV).
 
--spec update(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), DataStatus :: atom()) -> #ec_dvv{}.
+-spec update(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), DataStatus :: term()) -> #ec_dvv{}.
 update(#ec_dvv{module=Mod, type=Type, name=Name, option=Option}=Delta, 
        #ec_dvv{module=Mod, type=Type, name=Name, option=Option}=State, 
        ServerId,

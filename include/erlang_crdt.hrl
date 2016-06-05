@@ -81,10 +81,14 @@
 -define(EC_RECONCILE,                 ec_reconcile).
 -define(EC_RECONCILED,                ec_reconciled).
 
--define(EC_DVV_CLEAN_STATE,           dvv_clean_state).
--define(EC_DVV_DIRTY_STATE,           dvv_dirty_state).
--define(EC_DVV_CLEAN_DELTA,           dvv_clean_delta).
--define(EC_DVV_DIRTY_DELTA,           dvv_dirty_delta).
+-define(EC_DVV_CLEAN,                 dvv_clean).
+-define(EC_DVV_DIRTY,                 dvv_dirty).
+-define(EC_DVV_STATE,                 dvv_state).
+-define(EC_DVV_DELTA,                 dvv_delta).
+-define(EC_DVV_CLEAN_STATE,           {?EC_DVV_CLEAN, ?EC_DVV_STATE}).
+-define(EC_DVV_DIRTY_STATE,           {?EC_DVV_DIRTY, ?EC_DVV_STATE}).
+-define(EC_DVV_CLEAN_DELTA,           {?EC_DVV_CLEAN, ?EC_DVV_DELTA}).
+-define(EC_DVV_DIRTY_DELTA,           {?EC_DVV_DIRTY, ?EC_DVV_DELTA}).
 
 -define(EC_UNDEFINED,                 undefined).
 
@@ -97,7 +101,7 @@
 			    type                       :: atom(),
 			    name                       :: atom(),
 			    option                     :: term(),
-			    status=?EC_DVV_CLEAN_STATE :: ?EC_DVV_CLEAN_STATE | ?EC_DVV_DIRTY_STATE | ?EC_DVV_CLEAN_DELTA | ?EC_DVV_DIRTY_DELTA,
+			    status=?EC_DVV_CLEAN_STATE :: term(),
 			    dot_list=[]                :: list(),
 			    annonymus_list=[]          :: list()}).
 

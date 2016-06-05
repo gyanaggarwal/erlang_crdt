@@ -42,7 +42,8 @@ new_delta(Value, DL, State, ServerId) ->
                 Dot   ->
                     [Dot]
             end,
-    add_param(ec_dvv:new(NewDL, Value), State).
+    NewDelta = ec_dvv:new(NewDL, Value),
+    add_param(NewDelta#ec_dvv{status=?EC_DVV_DIRTY_DELTA}, State).
 
 -spec find_dot(DX :: list() | #ec_dvv{}, ServerId :: term()) -> false | #ec_dot{}.
 find_dot(DL, ServerId) when is_list(DL) ->
@@ -69,19 +70,21 @@ find_module(Type) ->
 	    Mod
     end.
 
--spec is_valid(DVV :: #ec_dvv{} | ?EC_UNDEFINED) -> true | false.
-is_valid(?EC_UNDEFINED) ->    
-    false;
-is_valid(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
-    lists:foldl(fun(#ec_dot{values=VS}, Flag) -> Flag orelse length(VS) > 0 end, length(AL) > 0, DL).
+-spec is_valid(DVV :: #ec_dvv{}) -> true | false.
+is_valid(#ec_dvv{}=DVV) ->
+    is_dirty(DVV).
 
 -spec is_dirty(DVV :: #ec_dvv{}) -> true | false.
-is_dirty(#ec_dvv{status=Status}) ->
-    Status =:= ?EC_DVV_DIRTY_STATE orelse Status =:= ?EC_DVV_DIRTY_DELTA.
+is_dirty(#ec_dvv{status={?EC_DVV_DIRTY, _}}) ->
+    true;
+is_dirty(#ec_dvv{}) ->
+    false.
 
 -spec is_state(DVV :: #ec_dvv{}) -> true | false.
-is_state(#ec_dvv{status=Status}) ->
-    Status =:= ?EC_DVV_DIRTY_STATE orelse Status =:= ?EC_DVV_CLEAN_STATE.
+is_state(#ec_dvv{status={_, ?EC_DVV_STATE}}) ->
+    true;
+is_state(#ec_dvv{}) ->
+    false.
 
 -spec delta_state_pair({Delta :: #ec_dvv{}, State :: #ec_dvv{}}) -> {#ec_dvv{}, #ec_dvv{}}.
 delta_state_pair({Delta, State}) ->
