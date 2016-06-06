@@ -48,7 +48,7 @@ delta_crdt({?EC_OPS_MUTATE, {{Type, Name}, Ops}}, DL, #ec_dvv{module=?MODULE, an
 -spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: term()) -> #ec_dvv{}.
 reconcile_crdt(#ec_dvv{module=?MODULE, dot_list=DL1, annonymus_list=[CMap1]}=State, ServerId, ?EC_LOCAL, DataStatus) ->
     #ec_dot{replica_id=ServerId, values=[#ec_dvv{type=Type1, name=Name1}=DVV1]} = Dot1 = ec_crdt_util:find_dot(DL1, ServerId),
-    case ec_crdt_util:is_valid(DVV1) of
+    case ec_crdt_util:is_dirty(DVV1) of
 	true  ->
 	    DVV3 = find_dvv({Type1, Name1}, CMap1),
 	    DVV4 = ec_gen_crdt:update(DVV1, DVV3, ServerId, DataStatus),

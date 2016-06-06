@@ -23,8 +23,6 @@
 	 find_dot/2,
 	 find_module/1,
 	 is_dirty/1,
-	 is_state/1,
-	 is_valid/1,
 	 delta_state_pair/1,
 	 reset/2]).
 
@@ -70,20 +68,10 @@ find_module(Type) ->
 	    Mod
     end.
 
--spec is_valid(DVV :: #ec_dvv{}) -> true | false.
-is_valid(#ec_dvv{}=DVV) ->
-    is_dirty(DVV).
-
 -spec is_dirty(DVV :: #ec_dvv{}) -> true | false.
 is_dirty(#ec_dvv{status={?EC_DVV_DIRTY, _}}) ->
     true;
 is_dirty(#ec_dvv{}) ->
-    false.
-
--spec is_state(DVV :: #ec_dvv{}) -> true | false.
-is_state(#ec_dvv{status={_, ?EC_DVV_STATE}}) ->
-    true;
-is_state(#ec_dvv{}) ->
     false.
 
 -spec delta_state_pair({Delta :: #ec_dvv{}, State :: #ec_dvv{}}) -> {#ec_dvv{}, #ec_dvv{}}.
@@ -104,7 +92,14 @@ reset_dot_list(DL, ?EC_RESET_VALUES) ->
     lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max, values=[]} | Acc] end, [], DL);
 reset_dot_list(DL, ?EC_RESET_VALUES_ONLY) ->
     lists:foldl(fun(DotX, Acc) -> [DotX#ec_dot{values=[]} | Acc] end, [], DL).
-			
+
+-spec is_state(DVV :: #ec_dvv{}) -> true | false.
+is_state(#ec_dvv{status={_, ?EC_DVV_STATE}}) ->	
+    true;
+is_state(#ec_dvv{}) ->
+    false.
+
+
 
 
     

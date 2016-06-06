@@ -102,7 +102,7 @@ mutate(Ops,
        #ec_dvv{module=Mod, type=Type, name=Name, option=Option}=State, 
        ServerId) ->
     Delta = Mod:delta_crdt(Ops, DL, State, ServerId),
-    case ec_crdt_util:is_valid(Delta) of
+    case ec_crdt_util:is_dirty(Delta) of
 	true  ->
 	    case Mod:causal_consistent_crdt(Delta, State, 0, ServerId, ?EC_LOCAL) of
 		?EC_CAUSALLY_CONSISTENT ->
