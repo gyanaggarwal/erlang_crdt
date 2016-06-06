@@ -100,7 +100,24 @@ data_compmap01() ->
 	   {mutate, {{?EC_PWORMAP,    pws2}, {put, {k11, v254}}}}, 
 	   {mutate, {{?EC_PWORMAP,    pws2}, {put, {k12, v255}}}}],
     {?EC_COMPMAP, ?EC_UNDEFINED, L11, L13, L15, L25}. 
-    
+
+data_compmap02() ->    
+    L11 = [{mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_MVREGISTER, mvc1}, {val, v111}}}}}],
+    L13 = [{mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_PNCOUNTER,  pnc1}, {dec, 2}}}}},
+           {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_AWORSET,    awc1}, {add, v133}}}}},
+	   {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_AWORSET,    awc1}, {rmv, v153}}}}}],
+    L15 = [{mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 5}}}}},
+           {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_PNCOUNTER,  pnx1}, {inc, 6}}}}},
+           {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_AWORSET,    awc1}, {add, v153}}}}},
+           {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_AWORSET,    awx1}, {add, v154}}}}},
+	   {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_MVREGISTER, mvc1}, {val, v155}}}}}],
+    L25 = [{mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_MVREGISTER, mvc1}, {val, v251}}}}},
+           {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 4}}}}},
+           {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_AWORSET,    awc1}, {add, v253}}}}},
+           {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_PWORMAP,    pws2}, {put, {k11, v254}}}}}},
+	   {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_PWORMAP,    pws2}, {put, {k12, v255}}}}}}],
+    {?EC_COMPMAP, ?EC_UNDEFINED, L11, L13, L15, L25}.
+
 query_test0(Data) ->
     query_test0(Data, ?EC_UNDEFINED).
 
@@ -205,36 +222,25 @@ get_ormap01() ->
 		    {{s2,2,k12},sets:from_list([v221])},
 		    {{s2,3,k14},sets:from_list([v241])}]).
 
-test_compmap01() ->
-    {DI100, DV100}  = new(?EC_COMPMAP, ?EC_UNDEFINED),
-    {ok, DI101, DV101} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pcc1}, {inc, 5}}}, ec_gen_crdt:causal_list({?EC_PNCOUNTER, pcc1}, DV100), DI100, DV100, x1),
-    {ok, DI102, DV102} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pcc1}, {dec, 2}}}, ec_gen_crdt:causal_list({?EC_PNCOUNTER, pcc1}, DV101), DI101, DV101, x1),    
-    {ok, DI103, DV103} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pcx1}, {inc, 7}}}, ec_gen_crdt:causal_list({?EC_PNCOUNTER, pcx1}, DV102), DI102, DV102, x1),   
-    {ok, DI104, DV104} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pcx1}, {inc, 5}}}, ec_gen_crdt:causal_list({?EC_PNCOUNTER, pcx1}, DV103), DI103, DV103, x1),   
-    {ok, DI105, DV105} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_GCOUNTER, gcc1}, {inc, 5}}}, ec_gen_crdt:causal_list({?EC_GCOUNTER, gcc1}, DV104), DI104, DV104, x1),
-    {ok, DI106, DV106} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_GCOUNTER, gcc1}, {inc, 2}}}, ec_gen_crdt:causal_list({?EC_GCOUNTER, gcc1}, DV105), DI105, DV105, x1),
-    {ok, DI107, DV107} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_GCOUNTER, gcx1}, {inc, 3}}}, ec_gen_crdt:causal_list({?EC_GCOUNTER, gcx1}, DV106), DI106, DV106, x1),
-    {ok, DI108, DV108} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_GCOUNTER, gcx1}, {inc, 5}}}, ec_gen_crdt:causal_list({?EC_GCOUNTER, gcx1}, DV107), DI107, DV107, x1),
-    {ok, DI109, DV109} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_EWFLAG, ewx1}, {val, false}}}, ec_gen_crdt:causal_list({?EC_EWFLAG, ewx1}, DV108), DI108, DV108, x1),
-    {ok, DI110, DV110} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_EWFLAG, ewx1}, {val, true}}}, ec_gen_crdt:causal_list({?EC_EWFLAG, ewx1}, DV109), DI109, DV109, x1),
+test_compmap02() ->
+    {DI01, DV01} = new(?EC_COMPMAP, ?EC_UNDEFINED),
     
-    {DI200, DV200}  = new(?EC_COMPMAP, ?EC_UNDEFINED),
-    {ok, DI201, DV201} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pcc1}, {inc, 5}}}, ec_gen_crdt:causal_list({?EC_PNCOUNTER, pcc1}, DV200), DI200, DV200, s2),
-    {ok, DI202, DV202} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pcc1}, {dec, 2}}}, ec_gen_crdt:causal_list({?EC_PNCOUNTER, pcc1}, DV201), DI201, DV201, s2),
-    {ok, DI203, DV203} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pcs2}, {inc, 7}}}, ec_gen_crdt:causal_list({?EC_PNCOUNTER, pcs2}, DV202), DI202, DV202, s2),
-    {ok, DI204, DV204} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pcs2}, {inc, 5}}}, ec_gen_crdt:causal_list({?EC_PNCOUNTER, pcs2}, DV203), DI203, DV203, s2),
-    {ok, DI205, DV205} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_GCOUNTER, gcc1}, {inc, 5}}}, ec_gen_crdt:causal_list({?EC_GCOUNTER, gcc1}, DV204), DI204, DV204, s2),
-    {ok, DI206, DV206} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_GCOUNTER, gcc1}, {inc, 2}}}, ec_gen_crdt:causal_list({?EC_GCOUNTER, gcc1}, DV205), DI205, DV205, s2),
-    {ok, DI207, DV207} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_GCOUNTER, gcs2}, {inc, 3}}}, ec_gen_crdt:causal_list({?EC_GCOUNTER, gcs2}, DV206), DI206, DV206, s2),
-    {ok, DI208, DV208} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_GCOUNTER, gcs2}, {inc, 5}}}, ec_gen_crdt:causal_list({?EC_GCOUNTER, gcs2}, DV207), DI207, DV207, s2),
-    {ok, DI209, DV209} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_DWFLAG, ewx1}, {val, false}}}, ec_gen_crdt:causal_list({?EC_DWFLAG, ewx1}, DV208), DI208, DV208, s2),
-    {ok, DI210, DV210} = ec_gen_crdt:mutate({?EC_OPS_MUTATE, {{?EC_DWFLAG, ewx1}, {val, true}}}, ec_gen_crdt:causal_list({?EC_DWFLAG, ewx1}, DV209), DI209, DV209, s2),
-
-    {ok, DX1} = ec_gen_crdt:merge(DI210, DV110, s2),
-    {ok, DX2} = ec_gen_crdt:merge(DI110, DV210, x1),
+    Ops01 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_INC, 10}}}}},
+    DL01 = ec_gen_crdt:causal_list(Ops01, DV01),
+    {ok, DI02, DV02} = ec_gen_crdt:mutate(Ops01, DL01, DI01, DV01, x1),
     
-    {DX1, DX2}.
+    Ops02 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_DEC, 3}}}}},
+    DL02 = ec_gen_crdt:causal_list(Ops02, DV02),
+    {ok, DI03, DV03} = ec_gen_crdt:mutate(Ops02, DL02, DI02, DV02, x1),
 
+    DR03 = ec_gen_crdt:reset(DI03),
+    Ops03 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn02}, {?EC_OPS_INC, 10}}}}},
+    DL03 = ec_gen_crdt:causal_list(Ops03, DV03),
+    {ok, DI04, DV04} = ec_gen_crdt:mutate(Ops03, DL03, DR03, DV03, x1),
+    
+    DM04 = ec_gen_crdt:mutated(DI04),
+    
+    {DR03, DI04, DM04, DV04}.
 
 
 

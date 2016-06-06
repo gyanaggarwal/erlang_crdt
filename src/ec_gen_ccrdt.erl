@@ -82,9 +82,9 @@ reset_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=State) ->
 
 -spec mutated_crdt(DVV :: #ec_dvv{}) -> #ec_dvv{}.
 mutated_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=DVV) ->
-    CMap1 = maps:filter(fun(_KX, DVVX) -> ec_crdt_util:is_dirty(DVVX) end, CMap),
+    CMap1 = maps:fold(fun mutated_crdt_fun/3, maps:new(), CMap),
     DVV#ec_dvv{annonymus_list=[CMap1]}.
-			       
+
 -spec causal_consistent_crdt(Delta :: #ec_dvv{}, 
 			     State :: #ec_dvv{}, 
 			     Offset :: non_neg_integer(), 
@@ -130,12 +130,12 @@ query_crdt([{Type, Name} | TCriteria], #ec_dvv{module=?MODULE, annonymus_list=[C
     end.
 
 -spec causal_list_crdt(Ops :: term(), State :: #ec_dvv{}) -> list().
-causal_list_crdt({_, {{Type, Name}, _}}, #ec_dvv{module=?MODULE, annonymus_list=[CMap]}) ->
+causal_list_crdt({_, {{Type, Name}, Ops}}, #ec_dvv{module=?MODULE, annonymus_list=[CMap]}) ->
     case maps:find({Type, Name}, CMap) of
 	error                                   ->
 	    [];
 	{ok, #ec_dvv{type=Type, name=Name}=DVV} ->
-	    ec_gen_crdt:causal_list(?EC_UNDEFINED, DVV)
+	    ec_gen_crdt:causal_list(Ops, DVV)
     end.
 
 % private function
@@ -177,6 +177,14 @@ causal_consistent_fun({Type, Name}, Delta, CState, Offset, ServerId, Acc) ->
 	    [Reason | Acc]
     end.
 
-
+-spec mutated_crdt_fun(K :: term(), DVV :: #ec_dvv{}, Map :: maps:map()) -> maps:map().
+mutated_crdt_fun(K, DVV, Map) ->
+    DVV1 = ec_gen_crdt:mutated(DVV),
+    case ec_crdt_util:is_dirty(DVV1) of
+	true  ->
+	    maps:put(K, DVV1, Map);
+	false ->
+	    Map
+    end.
     
 

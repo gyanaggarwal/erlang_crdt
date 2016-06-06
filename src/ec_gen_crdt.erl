@@ -65,7 +65,7 @@ new(Type, Name, Args) ->
     Mod = ec_crdt_util:find_module(Type),
     Mod:new_crdt(Type, Name, Args).
 
--spec causal_list({Type :: atom(), Name :: term()} | ?EC_UNDEFINED, State :: #ec_dvv{}) -> list().
+-spec causal_list(Args :: term(), State :: #ec_dvv{}) -> list().
 causal_list(Args, #ec_dvv{module=Mod}=State) ->
     Mod:causal_list_crdt(Args, State).
 
