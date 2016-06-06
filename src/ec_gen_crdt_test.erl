@@ -201,17 +201,6 @@ mutate_scrdt(Ops, DL11, DV11, UFun, QFun) ->
     io:fwrite("~p=~p~n", [Ops, QFun(ec_gen_crdt:query(DV12))]),
     DV12.
 
-hide_fun(_X) ->
-    ok.
-
-default_fun(X) ->
-    X.
-
-get_fun(?EC_UNDEFINED) ->
-    fun default_fun/1;
-get_fun(Fun) ->
-    Fun.
-
 get_ormap01() ->
     maps:from_list([{{x1,3,k11},sets:from_list([v112])},
 		    {{x1,5,k13},sets:from_list([v131])},
