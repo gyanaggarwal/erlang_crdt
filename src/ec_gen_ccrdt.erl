@@ -150,8 +150,7 @@ merge_map_fun({Type1, Name1}, #ec_dvv{module=Mod, type=Type1, name=Name1, option
 		     error ->
 			 {ok, DVV1};
 		     {ok, #ec_dvv{module=Mod, type=Type1, name=Name1, option=Option}=DVV2} ->
-			 {DVV11, DVV21} = ec_crdt_util:delta_state_pair({DVV1, DVV2}),
-			 ec_gen_crdt:merge(DVV11, DVV21, ServerId)
+			 ec_gen_crdt:merge(DVV1, DVV2, ServerId)
                  end,
     maps:put({Type1, Name1}, DVV3, CMap2).
 

@@ -84,12 +84,13 @@ merge(#ec_dvv{module=Mod, type=Type, name=Name, option=Option},
 merge(#ec_dvv{module=Mod, type=Type, name=Name, option=Option}=Delta, 
       #ec_dvv{module=Mod, type=Type, name=Name, option=Option}=State, 
       ServerId) ->
-    case Mod:causal_consistent_crdt(Delta, State, 1, ServerId, ?EC_GLOBAL) of
+    {Delta1, State1} = ec_crdt_util:delta_state_pair({Delta, State}),
+    case Mod:causal_consistent_crdt(Delta1, State1, 1, ServerId, ?EC_GLOBAL) of
 	?EC_CAUSALLY_CONSISTENT ->
-	    State1 = ec_dvv:sync([Delta, State], Mod:merge_fun_crdt([Type])),
-	    State2 = ec_crdt_util:add_param(State1, State),
-	    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_GLOBAL, ?EC_DVV_DIRTY_STATE),
-	    {ok, ec_crdt_util:add_param(State3#ec_dvv{status=?EC_DVV_DIRTY_STATE}, State)};
+	    State2 = ec_dvv:sync([Delta1, State1], Mod:merge_fun_crdt([Type])),
+	    State3 = ec_crdt_util:add_param(State2, State1),
+	    State4 = Mod:reconcile_crdt(State3, ServerId, ?EC_GLOBAL, ?EC_DVV_DIRTY_STATE),
+	    {ok, ec_crdt_util:add_param(State4#ec_dvv{status=?EC_DVV_DIRTY_STATE}, State1)};
 	Reason                  ->
 	    {error, Reason}
     end.
@@ -103,11 +104,10 @@ mutate(Ops,
     Delta = Mod:delta_crdt(Ops, DL, State, ServerId),
     case ec_crdt_util:is_valid(Delta) of
 	true  ->
-	    Delta1 = Delta#ec_dvv{status=?EC_DVV_DIRTY_DELTA},
-	    case Mod:causal_consistent_crdt(Delta1, State, 0, ServerId, ?EC_LOCAL) of
+	    case Mod:causal_consistent_crdt(Delta, State, 0, ServerId, ?EC_LOCAL) of
 		?EC_CAUSALLY_CONSISTENT ->
-		    State1 = update(Delta1, State, ServerId, ?EC_DVV_DIRTY_STATE),
-		    DI1    = update(Delta1, DI,    ServerId, ?EC_DVV_DIRTY_DELTA),
+		    State1 = update(Delta, State, ServerId, ?EC_DVV_DIRTY_STATE),
+		    DI1    = update(Delta, DI,    ServerId, ?EC_DVV_DIRTY_DELTA),
 		    {ok, DI1, State1};
 		Reason                  ->
 		    {error, Reason}
