@@ -20,7 +20,7 @@
 
 -behavior(ec_gen_crdt).
 
--export([new_crdt/3,
+-export([new_crdt/2,
 	 delta_crdt/4,
 	 reconcile_crdt/4,
 	 update_fun_crdt/1,
@@ -29,13 +29,13 @@
 	 reset_crdt/1,
 	 mutated_crdt/1,
 	 causal_list_crdt/2,
-	 causal_consistent_crdt/5]).
+	 causal_consistent_crdt/6]).
 	 
 -include("erlang_crdt.hrl").
 
--spec new_crdt(Type :: atom(), Name :: term(), Args :: term()) -> #ec_dvv{}.
-new_crdt(Type, Name, Args) ->
-    #ec_dvv{module=?MODULE, type=Type, name=Name, option=Args, annonymus_list=[new_annonymus_value(Type)]}. 
+-spec new_crdt(Type :: atom(), Name :: term()) -> #ec_dvv{}.
+new_crdt(Type, Name) ->
+    #ec_dvv{module=?MODULE, type=Type, name=Name, annonymus_list=[new_annonymus_value(Type)]}. 
 
 -spec delta_crdt(Ops :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 delta_crdt(Ops, DL, #ec_dvv{module=?MODULE}=State, ServerId) ->
@@ -49,7 +49,7 @@ delta_crdt(Ops, DL, #ec_dvv{module=?MODULE}=State, ServerId) ->
 
 -spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: term()) -> #ec_dvv{}.
 reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[AD1]}=State, ServerId, ?EC_LOCAL, _DataStatus) ->
-    Dot1 = ec_crdt_util:find_dot(State, ServerId),
+    Dot1 = ec_dvv:find_dot(State, ServerId),
     {Tag, V9} = case Dot1#ec_dot.values of
 		    [V1]     ->
 			{?EC_RECONCILE, V1};
@@ -64,8 +64,7 @@ reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[
 		  reconcile(Type, ?EC_LOCAL, V9, AD1)
           end,
 
-    Dot9 = Dot1#ec_dot{values=[V9]},
-    DL9 = ec_dvv:replace_dot_list(DL1, Dot9),
+    DL9 = ec_dvv:replace_dot_list(DL1, ec_dvv:empty_dot(Dot1)),
     State#ec_dvv{dot_list=DL9, annonymus_list=[AD9]};
 reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_GLOBAL, _DataStatus) ->			     
     D3 = reconcile(Type, ?EC_GLOBAL, D1, D2),
@@ -98,18 +97,15 @@ causal_list_crdt(_Ops, #ec_dvv{module=?MODULE}=State) ->
 			     State :: #ec_dvv{}, 
 			     Offset :: non_neg_integer(), 
 			     ServerId :: term(),
-			     Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> ?EC_CAUSALLY_CONSISTENT | list().
-causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=Delta, 
-		       #ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=State,
+			     Flag :: ?EC_LOCAL | ?EC_GLOBAL,
+			     List :: list()) -> list().
+causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name}=Delta, 
+		       #ec_dvv{module=?MODULE, type=Type, name=Name}=State,
 		       Offset,
 		       ServerId,
-		       _Flag) ->
-    case ec_dvv:causal_consistent(Delta, State, Offset, ServerId) of
-	?EC_CAUSALLY_CONSISTENT ->
-	    ?EC_CAUSALLY_CONSISTENT;
-	Reason                  ->
-	    [Reason]
-    end.
+		       _Flag,
+		       List) ->
+    ec_crdt_util:causal_consistent(Delta, State, Offset, ServerId, List).
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> sets:set() | maps:map() | {ok, term()} | error.
 query_crdt([Criteria], #ec_dvv{module=?MODULE}=State)                                            ->
@@ -205,7 +201,7 @@ reconcile(?EC_RWORMAP, ?EC_GLOBAL, {V1, C1}, {V2, C2}) ->
 
 -spec next_counter_value(State :: #ec_dvv{}, ServerId :: term()) -> non_neg_integer().
 next_counter_value(#ec_dvv{module=?MODULE}=State, ServerId) ->    
-    case ec_crdt_util:find_dot(State, ServerId) of
+    case ec_dvv:find_dot(State, ServerId) of
         false                    ->
             1;
 	#ec_dot{counter_max=Max} ->            

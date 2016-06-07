@@ -20,21 +20,21 @@
 
 -export([add_param/2, 
 	 new_delta/4,
-	 find_dot/2,
 	 find_module/1,
 	 is_dirty/1,
 	 delta_state_pair/1,
+	 causal_consistent/5,
 	 reset/2]).
 
 -include("erlang_crdt.hrl").
 
 -spec add_param(DVV :: #ec_dvv{}, State :: #ec_dvv{}) -> #ec_dvv{}.
-add_param(DVV, #ec_dvv{module=Mod, type=Type, name=Name, option=Option}) ->
-    DVV#ec_dvv{module=Mod, type=Type, name=Name, option=Option}.
+add_param(DVV, #ec_dvv{module=Mod, type=Type, name=Name}) ->
+    DVV#ec_dvv{module=Mod, type=Type, name=Name}.
 
 -spec new_delta(Value :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 new_delta(Value, DL, State, ServerId) ->
-    NewDL = case find_dot(DL, ServerId) of
+    NewDL = case ec_dvv:find_dot(DL, ServerId) of
                 false ->        
                     [];
                 Dot   ->
@@ -42,12 +42,6 @@ new_delta(Value, DL, State, ServerId) ->
             end,
     NewDelta = ec_dvv:new(NewDL, Value),
     add_param(NewDelta#ec_dvv{status=?EC_DVV_DIRTY_DELTA}, State).
-
--spec find_dot(DX :: list() | #ec_dvv{}, ServerId :: term()) -> false | #ec_dot{}.
-find_dot(DL, ServerId) when is_list(DL) ->
-    lists:keyfind(ServerId, #ec_dot.replica_id, DL);
-find_dot(#ec_dvv{dot_list=DL}, ServerId) ->
-    find_dot(DL, ServerId).
 
 -spec reset(DVV :: #ec_dvv{}, Flag :: ?EC_RESET_NONE | ?EC_RESET_VALUES | ?EC_RESET_ANNONYMUS_LIST | ?EC_RESET_ALL | ?EC_RESET_VALUES_ONLY) -> #ec_dvv{}.
 reset(#ec_dvv{}=DVV, ?EC_RESET_RETAIN_ALL) ->
@@ -81,6 +75,19 @@ delta_state_pair({Delta, State}) ->
 	    {Delta, State};
 	false ->
 	    {State, Delta}
+    end.
+
+-spec causal_consistent(Delta :: #ec_dvv{}, State :: #ec_dvv{}, Offset :: non_neg_integer(), ServerId :: term(), List :: list()) -> list().
+causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
+		  #ec_dvv{module=Mod, type=Type, name=Name}=State,
+		  Offset,
+		  ServerId,
+		  List) ->
+    case ec_dvv:causal_consistent(Delta, State, Offset, ServerId) of
+        ?EC_CAUSALLY_CONSISTENT -> 
+	    List;
+	Reason                  ->                 
+	    [Reason | List]
     end.
 
 % private function

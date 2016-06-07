@@ -30,6 +30,8 @@
 	 compare_causality/2,
 	 sort_dot_list/1,
 	 replace_dot_list/2,
+	 find_dot/2,
+	 empty_dot/1,
 	 merge_default/3]).
 
 -include("erlang_crdt.hrl").
@@ -77,45 +79,64 @@ values(#ec_dvv{dot_list=DL, annonymus_list=AL}) ->
 join(?EC_UNDEFINED) ->
     ?EC_UNDEFINED;
 join(#ec_dvv{dot_list=DL}) ->
-    lists:foldl(fun(Dot, Acc) -> [Dot#ec_dot{values=[]} | Acc] end, [], DL).
+    lists:foldl(fun(Dot, Acc) -> [empty_dot(Dot) | Acc] end, [], DL).
 
 -spec causal_consistent(Clock1 :: #ec_dvv{} | ?EC_UNDEFINED, 
 			Clock2 :: #ec_dvv{} | ?EC_UNDEFINED, 
 			OffSet :: non_neg_integer(), 
-			ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | ?EC_CAUSALLY_BEHIND | {?EC_CAUSALLY_AHEAD, term()}.
-causal_consistent(?EC_UNDEFINED, ?EC_UNDEFINED, _Offset, _ServerId) ->
+			ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | 
+					       {?EC_CAUSALLY_BEHIND, term()} | 
+					       {?EC_CAUSALLY_AHEAD, term()}.
+causal_consistent(?EC_UNDEFINED, 
+		  ?EC_UNDEFINED, 
+		  _Offset, 
+		  _ServerId) ->   
     ?EC_CAUSALLY_CONSISTENT;
-causal_consistent(?EC_UNDEFINED, #ec_dvv{}, _Offset, _ServerId) ->
-    ?EC_CAUSALLY_BEHIND;
-causal_consistent(#ec_dvv{dot_list=DDL}, ?EC_UNDEFINED, _Offset, ServerId) ->
-    case lists:keyfind(ServerId, #ec_dot.replica_id, DDL) of
-	false                  ->
-	    ?EC_CAUSALLY_CONSISTENT;
-	#ec_dot{counter_min=1} ->
-	    ?EC_CAUSALLY_CONSISTENT;
-	_                      ->
-	    {?EC_CAUSALLY_AHEAD, ?EC_DOT_DOES_NOT_EXIST}
+causal_consistent(?EC_UNDEFINED, 
+		  #ec_dvv{type=Type, name=Name, status=Status2, dot_list=SDL}, 
+		  _Offset, 
+		  ServerId) ->
+    case find_dot(SDL, ServerId) of
+        false ->
+            ?EC_CAUSALLY_CONSISTENT;
+        Dot2  ->
+            {?EC_CAUSALLY_BEHIND, {?EC_UNDEFINED, causal_info(Dot2, Type, Name, Status2)}}
     end;
-causal_consistent(#ec_dvv{dot_list=DDL}, #ec_dvv{dot_list=SDL}, Offset, ServerId) ->
-    case {lists:keyfind(ServerId, #ec_dot.replica_id, DDL), lists:keyfind(ServerId, #ec_dot.replica_id, SDL)} of
-	{false, _}                                                               ->
-	    ?EC_CAUSALLY_CONSISTENT;
-	{#ec_dot{counter_min=1}, false}                                          ->
-	    ?EC_CAUSALLY_CONSISTENT;
-	{#ec_dot{}, false}                                                       ->
-	    {?EC_CAUSALLY_AHEAD, ?EC_DOT_DOES_NOT_EXIST};
-	{#ec_dot{counter_max=Max1, counter_min=Min1}, #ec_dot{counter_max=Max2}=Dot2} ->
-	    case (Max2 >= Min1) of
-		true  ->
-		    case (Max2 =< (Max1-Offset)) of
-			true  ->
-			    ?EC_CAUSALLY_CONSISTENT;
-			false ->
-			    ?EC_CAUSALLY_BEHIND
-	            end;
-		false  ->
-		    {?EC_CAUSALLY_AHEAD, Dot2#ec_dot{values=[]}}
-	    end
+causal_consistent(#ec_dvv{type=Type, name=Name, status=Status1, dot_list=DDL}, 
+		  ?EC_UNDEFINED, 
+		  _Offset, 
+		  ServerId) ->
+    case find_dot(DDL, ServerId) of
+        false                  ->
+            ?EC_CAUSALLY_CONSISTENT;
+        #ec_dot{counter_min=1} ->
+            ?EC_CAUSALLY_CONSISTENT;
+        Dot1                   ->
+            {?EC_CAUSALLY_AHEAD, {causal_info(Dot1, Type, Name, Status1), ?EC_UNDEFINED}}
+    end;
+causal_consistent(#ec_dvv{type=Type, name=Name, status=Status1, dot_list=DDL}, 
+		  #ec_dvv{type=Type, name=Name, status=Status2, dot_list=SDL}, 
+		  Offset, 
+		  ServerId) ->
+    case {find_dot(DDL, ServerId), find_dot(SDL, ServerId)} of
+        {false, _}                                                                         ->
+            ?EC_CAUSALLY_CONSISTENT;
+        {#ec_dot{counter_min=1}, false}                                                    ->
+            ?EC_CAUSALLY_CONSISTENT;
+        {Dot1, false}                                                                      ->
+            {?EC_CAUSALLY_AHEAD, {causal_info(Dot1, Type, Name, Status1), ?EC_UNDEFINED}};
+        {#ec_dot{counter_max=Max1, counter_min=Min1}=Dot1, #ec_dot{counter_max=Max2}=Dot2} ->
+            case (Max2 >= Min1) of
+                true  ->
+                    case (Max2 =< (Max1-Offset)) of
+                        true  ->
+                            ?EC_CAUSALLY_CONSISTENT;
+                        false ->
+                            {?EC_CAUSALLY_BEHIND, {causal_info(Dot1, Type, Name, Status1), causal_info(Dot2, Type, Name, Status2)}}
+                    end;
+                false  ->
+                    {?EC_CAUSALLY_AHEAD, {causal_info(Dot1, Type, Name, Status1), causal_info(Dot2, Type, Name, Status2)}}
+            end
     end.
 
 -spec compare_causality(Clock1 :: #ec_dvv{}, Clock2 :: #ec_dvv{}) -> ?EC_EQUAL | ?EC_MORE | ?EC_LESS | ?EC_CONCURRENT.
@@ -134,7 +155,21 @@ replace_dot_list(DotList, Dot) ->
 merge_default(_Value1, _Value2, DefaultValue) ->    
     DefaultValue.
 
+-spec find_dot(DX :: list() | #ec_dvv{}, ServerId :: term()) -> false | #ec_dot{}.
+find_dot(DL, ServerId) when is_list(DL) ->     
+    lists:keyfind(ServerId, #ec_dot.replica_id, DL);
+find_dot(#ec_dvv{dot_list=DL}, ServerId) ->
+    find_dot(DL, ServerId).
+
+-spec empty_dot(Dot :: #ec_dot{}) -> #ec_dot{}.
+empty_dot(Dot) ->
+    Dot#ec_dot{values=[]}.
+
 %% private function
+
+-spec causal_info(Dot :: #ec_dot{}, Type :: atom(), Name :: term(), Status :: term()) -> term().
+causal_info(Dot, Type, Name, Status) ->
+    {Status, {Type, Name}, empty_dot(Dot)}.
 
 -spec replace_dot_list(DotList :: list(), Dot :: #ec_dot{}, InsertFlag :: true | false, Acc :: list()) -> list().
 replace_dot_list([#ec_dot{replica_id=Id1}=Dot1 | TDL], #ec_dot{replica_id=Id2}=Dot2, false, Acc) when Id1 < Id2 ->

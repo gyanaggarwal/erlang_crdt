@@ -70,7 +70,6 @@
 -define(EC_CAUSALLY_AHEAD,            causally_ahead).
 
 -define(EC_INVALID_OPERATION,         invalid_operation).
--define(EC_DOT_DOES_NOT_EXIST,        dot_does_not_exist).           
 
 -define(EC_INCORRECT_DELTA_INTERVAL,  incorrect_delta_interval).
 -define(EC_EMPTY_DELTA_INTERVAL,      empty_delta_interval).
@@ -100,7 +99,6 @@
 -record(ec_dvv,            {module                     :: atom(),
 			    type                       :: atom(),
 			    name                       :: atom(),
-			    option                     :: term(),
 			    status=?EC_DVV_CLEAN_STATE :: term(),
 			    dot_list=[]                :: list(),
 			    annonymus_list=[]          :: list()}).

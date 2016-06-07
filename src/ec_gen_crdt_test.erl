@@ -121,7 +121,7 @@ data_compmap02() ->
 query_test0(Data) ->
     query_test0(Data, ?EC_UNDEFINED).
 
-query_test0({DV1, DV2, DV3, _R1, _R2}, Criteria) ->
+query_test0([DV1, DV2, DV3 | _], Criteria) ->
     {ec_sets_util:pretty(ec_gen_crdt:query(Criteria, DV1)), 
      ec_sets_util:pretty(ec_gen_crdt:query(Criteria, DV2)), 
      ec_sets_util:pretty(ec_gen_crdt:query(Criteria, DV3))}.
@@ -129,33 +129,38 @@ query_test0({DV1, DV2, DV3, _R1, _R2}, Criteria) ->
 run_test0({Type, Name, L11, L13, L15, L25}) ->
     % server x1
     {DI11, DV11} = new(Type, Name),
-    {DI12, DV12} = mutate(L15, DI11, DV11, x1),                        % DI12 is delta mutation for elements 1,2,3,4,5
-    {DI13, DV13} = mutate(L11, ec_gen_crdt:reset(DI12), DV12, x1),     % DI13 is delta mutation for element 6
-    {DI14, _V14} = mutate(L13, ec_gen_crdt:reset(DI13), DV13, x1),     % DI14 is delta mutation for elements 7,8,9
+    {DI12, DV12} = mutate(L15, DI11, DV11, x1),                                            % DI12 is delta mutation for elements 1,2,3,4,5
+    {DI13, DV13} = mutate(L11, ec_gen_crdt:reset(DI12), DV12, x1),                         % DI13 is delta mutation for element 6
+    {DI14, _V14} = mutate(L13, ec_gen_crdt:reset(DI13), DV13, x1),                         % DI14 is delta mutation for elements 7,8,9
     
-    {DI15, DV15} = mutate(L11, DI12, DV12, x1),                        % DI15 is delta mutation for elements 1,2,3,4,5,6
-    {DI16, DV16} = mutate(L13, DI15, DV15, x1),                        % DI16 is delta mutation for elements 1,2,3,4,5,6,7,8,9
+    {DI15, DV15} = mutate(L11, DI12, DV12, x1),                                            % DI15 is delta mutation for elements 1,2,3,4,5,6
+    {DI16, DV16} = mutate(L13, DI15, DV15, x1),                                            % DI16 is delta mutation for elements 1,2,3,4,5,6,7,8,9
     
     % server s2
     {DI21, DV21} = new(Type, Name),
-    {DI22, DV22} = mutate(L25, DI21, DV21, s2),                        % DI22 is delta mutation for elements 1,2,3,4,5 
+    {DI22, DV22} = mutate(L25, DI21, DV21, s2),                                            % DI22 is delta mutation for elements 1,2,3,4,5 
               
     % updating s2 with incremental delta interval from x1
-    {ok, DV23}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI12), DV22), % updating server s2 with delta mutation DI12 from x1
-    {ok, DV24}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV23), % updating server s2 with delta mutation DI13 from x1
-    {ok, DV25}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV24), % updating server s2 with delta mutation DI14 from x1
+    {ok, DV23}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI12), DV22),                     % updating server s2 with delta mutation DI12 from x1
+    {ok, DV24}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV23),                     % updating server s2 with delta mutation DI13 from x1
+    {ok, DV25}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV24),                     % updating server s2 with delta mutation DI14 from x1
     
     % updating s2 with one consolidated delta interval from x1
-    {ok, DV26}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI16), DV22), % updating server s2 with delta mutation DI16 from x1
+    {ok, DV26}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI16), DV22),                     % updating server s2 with delta mutation DI16 from x1
 
     % updating x1 with delta interval from s2
-    {ok, DV17}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI22), DV16), % updating server x1 with delta mutation DI22 from s2
+    {ok, DV17}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI22), DV16),                     % updating server x1 with delta mutation DI22 from s2
 
-    % checking causality
-    R5           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV23), % delta interval causally_ahead
-    R6           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV25), % delta interval causally_behind
+    % checking global causality
+    R1           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV23),                     % delta interval causally_ahead
+    R2           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV24),                     % delta interval causally_behind
+    R3           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV25),                     % delta interval causally_behind
 
-    {DV25, DV26, DV17, R5, R6}.
+    % checking local causality
+    [Ops | _]    = L15,
+    R4           = ec_gen_crdt:mutate(Ops, ec_gen_crdt:causal_list(Ops, DV13), DI16, DV16, x1), % DV13 is causally_behind DV16
+
+    [DV25, DV26, DV17, R1, R2, R3, R4].
 
 data_orset01() ->
     [{add, v11}, {add, v12}, {rmv, v11}, {add, v11}, {rmv, v12}, {add, v12}].

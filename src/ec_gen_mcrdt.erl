@@ -20,7 +20,7 @@
 
 -behavior(ec_gen_crdt).
 
--export([new_crdt/3,
+-export([new_crdt/2,
 	 delta_crdt/4,
 	 reconcile_crdt/4,
 	 update_fun_crdt/1,
@@ -29,7 +29,7 @@
 	 reset_crdt/1,
 	 mutated_crdt/1,
 	 causal_list_crdt/2,
-	 causal_consistent_crdt/5,
+	 causal_consistent_crdt/6,
 	 add_gcounter/3,
 	 add_pncounter/3,
 	 merge_pncounter/3,
@@ -39,9 +39,9 @@
 
 -include("erlang_crdt.hrl").
 
--spec new_crdt(Type :: atom(), Name :: term(), Args :: term()) -> #ec_dvv{}.
-new_crdt(Type, Name, Args) ->
-    #ec_dvv{module=?MODULE, type=Type, name=Name, option=Args}.
+-spec new_crdt(Type :: atom(), Name :: term()) -> #ec_dvv{}.
+new_crdt(Type, Name) ->
+    #ec_dvv{module=?MODULE, type=Type, name=Name}.
 
 -spec delta_crdt(Ops :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 delta_crdt(Ops, DL, #ec_dvv{module=?MODULE, type=Type}=State, ServerId) ->
@@ -55,18 +55,15 @@ reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, _Flag, _DataStatus) ->
 			     State :: #ec_dvv{}, 
 			     Offset :: non_neg_integer(), 
 			     ServerId :: term(),
-			     Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> ?EC_CAUSALLY_CONSISTENT | list().
-causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=Delta, 
-		       #ec_dvv{module=?MODULE, type=Type, name=Name, option=Option}=State,
+			     Flag :: ?EC_LOCAL | ?EC_GLOBAL,
+			     List :: list()) -> list().
+causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name}=Delta, 
+		       #ec_dvv{module=?MODULE, type=Type, name=Name}=State,
 		       Offset,
 		       ServerId,
-		       _Flag) ->
-    case ec_dvv:causal_consistent(Delta, State, Offset, ServerId) of
-	?EC_CAUSALLY_CONSISTENT ->
-	    ?EC_CAUSALLY_CONSISTENT;
-	Reason                  ->
-	    [Reason]
-    end.
+		       _Flag,
+		       List) ->
+    ec_crdt_util:causal_consistent(Delta, State, Offset, ServerId, List).
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> term().
 query_crdt([], #ec_dvv{module=?MODULE}=State) ->
