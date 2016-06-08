@@ -28,7 +28,7 @@
          query_crdt/2,
          reset_crdt/1,
 	 mutated_crdt/1,
-	 causal_list_crdt/2,
+	 causal_context_crdt/2,
          causal_consistent_crdt/6]).
 
 -include("erlang_crdt.hrl").
@@ -115,13 +115,13 @@ query_crdt([{Type, Name} | TCriteria], #ec_dvv{module=?MODULE, annonymus_list=[C
 	    ec_gen_crdt:query(TCriteria, DVV)
     end.
 
--spec causal_list_crdt(Ops :: term(), State :: #ec_dvv{}) -> list().
-causal_list_crdt({_, {{Type, Name}, Ops}}, #ec_dvv{module=?MODULE, annonymus_list=[CMap]}) ->
+-spec causal_context_crdt(Ops :: term(), State :: #ec_dvv{}) -> list().
+causal_context_crdt({_, {{Type, Name}, Ops}}, #ec_dvv{module=?MODULE, annonymus_list=[CMap]}) ->
     case maps:find({Type, Name}, CMap) of
 	error                                   ->
 	    [];
 	{ok, #ec_dvv{type=Type, name=Name}=DVV} ->
-	    ec_gen_crdt:causal_list(Ops, DVV)
+	    ec_gen_crdt:causal_context(Ops, DVV)
     end.
 
 % private function

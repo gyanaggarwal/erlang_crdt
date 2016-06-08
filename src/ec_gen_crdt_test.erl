@@ -26,7 +26,7 @@ new(Type, Name) ->
     {ec_gen_crdt:new(Type, Name), ec_gen_crdt:new(Type, Name)}.
 
 mutate([Ops | T], DI0, DV0, ServerId) ->
-    case ec_gen_crdt:mutate(Ops, ec_gen_crdt:causal_list(Ops, DV0), DI0, DV0, ServerId) of
+    case ec_gen_crdt:mutate(Ops, ec_gen_crdt:causal_context(Ops, DV0), DI0, DV0, ServerId) of
 	{error, _} ->
 	    mutate(T, DI0, DV0, ServerId);
 	{ok, DI1, DV1} ->
@@ -216,16 +216,16 @@ test_compmap02() ->
     {DI01, DV01} = new(?EC_COMPMAP, ?EC_UNDEFINED),
     
     Ops01 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_INC, 10}}}}},
-    DL01 = ec_gen_crdt:causal_list(Ops01, DV01),
+    DL01 = ec_gen_crdt:causal_context(Ops01, DV01),
     {ok, DI02, DV02} = ec_gen_crdt:mutate(Ops01, DL01, DI01, DV01, x1),
     
     Ops02 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_DEC, 3}}}}},
-    DL02 = ec_gen_crdt:causal_list(Ops02, DV02),
+    DL02 = ec_gen_crdt:causal_context(Ops02, DV02),
     {ok, DI03, DV03} = ec_gen_crdt:mutate(Ops02, DL02, DI02, DV02, x1),
 
     DR03 = ec_gen_crdt:reset(DI03),
     Ops03 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn02}, {?EC_OPS_INC, 10}}}}},
-    DL03 = ec_gen_crdt:causal_list(Ops03, DV03),
+    DL03 = ec_gen_crdt:causal_context(Ops03, DV03),
     {ok, DI04, DV04} = ec_gen_crdt:mutate(Ops03, DL03, DR03, DV03, x1),
     
     DM04 = ec_gen_crdt:mutated(DI04),
@@ -236,25 +236,25 @@ test_compmap03() ->
     {DI01, DV01} = new(?EC_COMPMAP, ?EC_UNDEFINED),
     
     Ops01 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_INC, 1}}}}},
-    DL01  = ec_gen_crdt:causal_list(Ops01, DV01),
+    DL01  = ec_gen_crdt:causal_context(Ops01, DV01),
     {ok, DI02, DV02} = ec_gen_crdt:mutate(Ops01, DL01, DI01, DV01, x1),
     
     Ops02 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_INC, 2}}}}},
-    DL02  = ec_gen_crdt:causal_list(Ops02, DV02),
+    DL02  = ec_gen_crdt:causal_context(Ops02, DV02),
     {ok, DI03, DV03} = ec_gen_crdt:mutate(Ops02, DL02, DI02, DV02, x1),
     
     DR03  = ec_gen_crdt:reset(DI03),
     Ops03 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_INC, 3}}}}},
-    DL03  = ec_gen_crdt:causal_list(Ops03, DV03),
+    DL03  = ec_gen_crdt:causal_context(Ops03, DV03),
     {ok, DI04, DV04} = ec_gen_crdt:mutate(Ops03, DL03, DR03, DV03, x1),
 
     DR04  = ec_gen_crdt:reset(DI04),
     Ops04 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_INC, 4}}}}},
-    DL04  = ec_gen_crdt:causal_list(Ops04, DV04),
+    DL04  = ec_gen_crdt:causal_context(Ops04, DV04),
     {ok, DI05, DV05} = ec_gen_crdt:mutate(Ops04, DL04, DR04, DV04, x1),
     
     Ops05 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_INC, 5}}}}},
-    DL05  = ec_gen_crdt:causal_list(Ops05, DV05),
+    DL05  = ec_gen_crdt:causal_context(Ops05, DV05),
     {ok, DI06, DV06} = ec_gen_crdt:mutate(Ops05, DL05, DI05, DV05, x1),
     
     R1 = ec_gen_crdt:mutate(Ops04, DL04, DI06, DV06, x1),

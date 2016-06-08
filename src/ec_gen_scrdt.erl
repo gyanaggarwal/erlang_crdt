@@ -28,7 +28,7 @@
 	 query_crdt/2,
 	 reset_crdt/1,
 	 mutated_crdt/1,
-	 causal_list_crdt/2,
+	 causal_context_crdt/2,
 	 causal_consistent_crdt/6]).
 	 
 -include("erlang_crdt.hrl").
@@ -89,8 +89,8 @@ reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State) ->
 mutated_crdt(DVV) ->
     DVV.
 
--spec causal_list_crdt(Ops :: term(), State :: #ec_dvv{}) -> list().
-causal_list_crdt(_Ops, #ec_dvv{module=?MODULE}=State) ->
+-spec causal_context_crdt(Ops :: term(), State :: #ec_dvv{}) -> list().
+causal_context_crdt(_Ops, #ec_dvv{module=?MODULE}=State) ->
     ec_dvv:join(State).
 
 -spec causal_consistent_crdt(Delta :: #ec_dvv{}, 
@@ -116,6 +116,10 @@ query_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE, type=?EC_AWORSET, annonymus_li
     ec_sets_util:get_value_set(VSet);
 query_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE, type=?EC_RWORSET, annonymus_list=[{VSet, _}]}) ->
     ec_sets_util:get_value_set(VSet);
+query_crdt(Criteria, #ec_dvv{module=?MODULE, type=?EC_AWORSET, annonymus_list=[{VSet, _}]})      ->
+    sets:is_element(Criteria, ec_sets_util:get_value_set(VSet));
+query_crdt(Criteria, #ec_dvv{module=?MODULE, type=?EC_RWORSET, annonymus_list=[{VSet, _}]})      ->
+    sets:is_element(Criteria, ec_sets_util:get_value_set(VSet));
 query_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE, type=?EC_PWORMAP, annonymus_list=[{VMap, _}]}) ->
     ec_sets_util:get_value_map(VMap);
 query_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE, type=?EC_RWORMAP, annonymus_list=[{VMap, _}]}) ->

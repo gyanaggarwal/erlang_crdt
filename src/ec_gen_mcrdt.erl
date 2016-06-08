@@ -28,7 +28,7 @@
 	 query_crdt/2,
 	 reset_crdt/1,
 	 mutated_crdt/1,
-	 causal_list_crdt/2,
+	 causal_context_crdt/2,
 	 causal_consistent_crdt/6,
 	 add_gcounter/3,
 	 add_pncounter/3,
@@ -102,8 +102,8 @@ reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State) ->
 mutated_crdt(DVV) ->
     DVV.
 
--spec causal_list_crdt(Ops :: term(), State :: #ec_dvv{}) -> list().
-causal_list_crdt(_Ops, #ec_dvv{module=?MODULE}=State) ->    
+-spec causal_context_crdt(Ops :: term(), State :: #ec_dvv{}) -> list().
+causal_context_crdt(_Ops, #ec_dvv{module=?MODULE}=State) ->    
     ec_dvv:join(State).
 
 -spec update_fun_crdt(Args :: list()) -> {fun(), fun()}.

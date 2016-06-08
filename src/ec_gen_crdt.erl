@@ -51,8 +51,8 @@
 
 -callback mutated_crdt(DVV :: #ec_dvv{}) -> #ec_dvv{}.
 
--callback causal_list_crdt(Ops :: term(), 
-			   State :: #ec_dvv{}) -> list().
+-callback causal_context_crdt(Ops :: term(), 
+			      State :: #ec_dvv{}) -> list().
 
 -export([new/2,
 	 merge/2,
@@ -62,7 +62,7 @@
 	 query/1,
 	 query/2,
 	 update/4,
-	 causal_list/2,
+	 causal_context/2,
 	 reset/1]).
 
 -spec new(Type :: atom(), Name :: term()) -> #ec_dvv{}.
@@ -70,9 +70,9 @@ new(Type, Name) ->
     Mod = ec_crdt_util:find_module(Type),
     Mod:new_crdt(Type, Name).
 
--spec causal_list(Args :: term(), State :: #ec_dvv{}) -> list().
-causal_list(Args, #ec_dvv{module=Mod}=State) ->
-    Mod:causal_list_crdt(Args, State).
+-spec causal_context(Ops :: term(), State :: #ec_dvv{}) -> list().
+causal_context(Ops, #ec_dvv{module=Mod}=State) ->
+    Mod:causal_context_crdt(Ops, State).
 
 -spec merge(Delta :: #ec_dvv{}, State :: #ec_dvv{}) -> {ok, #ec_dvv{}} | {error, atom() | {atom(), #ec_dot{}}}.
 merge(#ec_dvv{module=Mod, type=Type, name=Name, dot_list=[#ec_dot{replica_id=ServerId}]}=Delta,
