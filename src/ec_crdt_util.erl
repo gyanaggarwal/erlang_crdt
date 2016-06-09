@@ -24,7 +24,7 @@
 	 is_dirty/1,
 	 delta_state_pair/1,
 	 causal_consistent/4,
-	 reset/2]).
+	 reset/3]).
 
 -include("erlang_crdt.hrl").
 
@@ -34,24 +34,17 @@ add_param(DVV, #ec_dvv{module=Mod, type=Type, name=Name}) ->
 
 -spec new_delta(Value :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 new_delta(Value, DL, State, ServerId) ->
-    NewDL = case ec_dvv:find_dot(DL, ServerId) of
-                false ->        
-                    [];
-                Dot   ->
-                    [Dot]
-            end,
-    NewDelta = ec_dvv:new(NewDL, Value),
+    NewDelta = ec_dvv:new(dot_list(DL, ServerId), Value),
     add_param(NewDelta#ec_dvv{status=?EC_DVV_DIRTY_DELTA}, State).
 
--spec reset(DVV :: #ec_dvv{}, Flag :: ?EC_RESET_NONE | ?EC_RESET_VALUES | ?EC_RESET_ANNONYMUS_LIST | ?EC_RESET_ALL | ?EC_RESET_VALUES_ONLY) -> #ec_dvv{}.
-reset(#ec_dvv{}=DVV, ?EC_RESET_RETAIN_ALL) ->
-    DVV;
-reset(#ec_dvv{dot_list=DL}=DVV, ?EC_RESET_ANNONYMUS_LIST) ->
-    DVV#ec_dvv{dot_list=reset_dot_list(DL, ?EC_RESET_NONE), annonymus_list=[]};
-reset(#ec_dvv{dot_list=DL}=DVV, ?EC_RESET_ALL) ->
-    DVV#ec_dvv{dot_list=reset_dot_list(DL, ?EC_RESET_VALUES), annonymus_list=[]};
-reset(#ec_dvv{dot_list=DL}=DVV, Flag) ->
-    DVV#ec_dvv{dot_list=reset_dot_list(DL, Flag)}.
+-spec reset(DVV :: #ec_dvv{},
+	    ServerId :: term(),
+	    Flag :: ?EC_RESET_NONE | 
+		    ?EC_RESET_VALUES | 
+		    ?EC_RESET_ANNONYMUS_LIST | 
+		    ?EC_RESET_ALL) -> #ec_dvv{}.
+reset(#ec_dvv{dot_list=DL}=DVV, ServerId, Flag) ->
+    reset(DVV#ec_dvv{dot_list=dot_list(DL, ServerId)}, Flag).
 
 -spec find_module(Type :: atom()) -> atom() | error.
 find_module(Type) ->
@@ -91,19 +84,39 @@ causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 
 % private function
 
--spec reset_dot_list(DL :: list(), Flag :: ?EC_RESET_NONE | ?EC_RESET_VALUES | ?EC_RESET_VALUES_ONLY) -> list().
+-spec reset(DVV :: #ec_dvv{},
+            Flag :: ?EC_RESET_NONE |
+                    ?EC_RESET_VALUES |
+                    ?EC_RESET_ANNONYMUS_LIST |
+                    ?EC_RESET_ALL) -> #ec_dvv{}.
+reset(#ec_dvv{dot_list=DL}=DVV, ?EC_RESET_ANNONYMUS_LIST) ->    
+    DVV#ec_dvv{dot_list=reset_dot_list(DL, ?EC_RESET_NONE), annonymus_list=[]};
+reset(#ec_dvv{dot_list=DL}=DVV, ?EC_RESET_ALL) ->
+    DVV#ec_dvv{dot_list=reset_dot_list(DL, ?EC_RESET_VALUES), annonymus_list=[]};
+reset(#ec_dvv{dot_list=DL}=DVV, Flag) ->
+    DVV#ec_dvv{dot_list=reset_dot_list(DL, Flag)}.
+
+-spec reset_dot_list(DL :: list(), Flag :: ?EC_RESET_NONE | ?EC_RESET_VALUES) -> list().
 reset_dot_list(DL, ?EC_RESET_NONE) ->
     lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max+1} | Acc] end, [], DL);
 reset_dot_list(DL, ?EC_RESET_VALUES) ->
-    lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max+1, values=[]} | Acc] end, [], DL);
-reset_dot_list(DL, ?EC_RESET_VALUES_ONLY) ->
-    lists:foldl(fun(DotX, Acc) -> [DotX#ec_dot{values=[]} | Acc] end, [], DL).
+    lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max+1, values=[]} | Acc] end, [], DL).
 
 -spec is_state(DVV :: #ec_dvv{}) -> true | false.
 is_state(#ec_dvv{status={_, ?EC_DVV_STATE}}) ->	
     true;
 is_state(#ec_dvv{}) ->
     false.
+
+-spec dot_list(DL :: list(), ServerId :: term()) -> list().
+dot_list(DL, ServerId) ->
+    case ec_dvv:find_dot(DL, ServerId) of
+	false ->	    
+	    [];
+	Dot   ->
+            [Dot]
+    end.
+
 
 
 

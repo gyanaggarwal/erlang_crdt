@@ -26,7 +26,7 @@
          update_fun_crdt/1,
          merge_fun_crdt/1,
          query_crdt/2,
-         reset_crdt/1,
+         reset_crdt/2,
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
          causal_consistent_crdt/5]).
@@ -73,10 +73,10 @@ update_fun_crdt([_Type]) ->
 merge_fun_crdt([_Type]) ->
     {fun ec_dvv:merge_default/3, fun ec_dvv:merge_default/3}.
 
--spec reset_crdt(State :: #ec_dvv{}) -> #ec_dvv{}.
-reset_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=State) ->
-    CMap1 = maps:fold(fun(Key, DVV, Acc) -> maps:put(Key, ec_gen_crdt:reset(DVV), Acc) end, maps:new(), CMap),
-    ec_crdt_util:reset(State#ec_dvv{annonymus_list=[CMap1]}, ?EC_RESET_NONE).
+-spec reset_crdt(State :: #ec_dvv{}, ServerI :: term()) -> #ec_dvv{}.
+reset_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=State, ServerId) ->
+    CMap1 = maps:fold(fun(Key, DVV, Acc) -> maps:put(Key, ec_gen_crdt:reset(DVV, ServerId), Acc) end, maps:new(), CMap),
+    ec_crdt_util:reset(State#ec_dvv{annonymus_list=[CMap1]}, ServerId, ?EC_RESET_NONE).
 
 -spec mutated_crdt(DVV :: #ec_dvv{}) -> #ec_dvv{}.
 mutated_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=DVV) ->

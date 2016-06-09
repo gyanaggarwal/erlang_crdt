@@ -130,8 +130,8 @@ run_test0({Type, Name, L11, L13, L15, L25}) ->
     % server x1
     {DI11, DV11} = new(Type, Name),
     {DI12, DV12} = mutate(L15, DI11, DV11, x1),                        % DI12 is delta mutation for elements 1,2,3,4,5
-    {DI13, DV13} = mutate(L11, ec_gen_crdt:reset(DI12), DV12, x1),     % DI13 is delta mutation for element 6
-    {DI14, _V14} = mutate(L13, ec_gen_crdt:reset(DI13), DV13, x1),     % DI14 is delta mutation for elements 7,8,9
+    {DI13, DV13} = mutate(L11, ec_gen_crdt:reset(DI12, x1), DV12, x1), % DI13 is delta mutation for element 6
+    {DI14, _V14} = mutate(L13, ec_gen_crdt:reset(DI13, x1), DV13, x1), % DI14 is delta mutation for elements 7,8,9
     
     {DI15, DV15} = mutate(L11, DI12, DV12, x1),                        % DI15 is delta mutation for elements 1,2,3,4,5,6
     {DI16, DV16} = mutate(L13, DI15, DV15, x1),                        % DI16 is delta mutation for elements 1,2,3,4,5,6,7,8,9
@@ -223,7 +223,7 @@ test_compmap02() ->
     DL02 = ec_gen_crdt:causal_context(Ops02, DV02),
     {ok, DI03, DV03} = ec_gen_crdt:mutate(Ops02, DL02, DI02, DV02, x1),
 
-    DR03 = ec_gen_crdt:reset(DI03),
+    DR03 = ec_gen_crdt:reset(DI03, x1),
     Ops03 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn02}, {?EC_OPS_INC, 10}}}}},
     DL03 = ec_gen_crdt:causal_context(Ops03, DV03),
     {ok, DI04, DV04} = ec_gen_crdt:mutate(Ops03, DL03, DR03, DV03, x1),
@@ -243,12 +243,12 @@ test_compmap03() ->
     DL02  = ec_gen_crdt:causal_context(Ops02, DV02),
     {ok, DI03, DV03} = ec_gen_crdt:mutate(Ops02, DL02, DI02, DV02, x1),
     
-    DR03  = ec_gen_crdt:reset(DI03),
+    DR03  = ec_gen_crdt:reset(DI03, x1),
     Ops03 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_INC, 3}}}}},
     DL03  = ec_gen_crdt:causal_context(Ops03, DV03),
     {ok, DI04, DV04} = ec_gen_crdt:mutate(Ops03, DL03, DR03, DV03, x1),
 
-    DR04  = ec_gen_crdt:reset(DI04),
+    DR04  = ec_gen_crdt:reset(DI04, x1),
     Ops04 = {?EC_OPS_MUTATE, {{?EC_COMPMAP, cm01}, {?EC_OPS_MUTATE, {{?EC_PNCOUNTER, pn01}, {?EC_OPS_INC, 4}}}}},
     DL04  = ec_gen_crdt:causal_context(Ops04, DV04),
     {ok, DI05, DV05} = ec_gen_crdt:mutate(Ops04, DL04, DR04, DV04, x1),

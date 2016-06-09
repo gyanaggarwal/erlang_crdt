@@ -26,7 +26,7 @@
 	 update_fun_crdt/1,
 	 merge_fun_crdt/1,
 	 query_crdt/2,
-	 reset_crdt/1,
+	 reset_crdt/2,
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
 	 causal_consistent_crdt/5]).
@@ -80,9 +80,9 @@ update_fun_crdt([_Type]) ->
 merge_fun_crdt([_Type]) ->
     {fun ec_dvv:merge_default/3, fun ec_dvv:merge_default/3}.
 
--spec reset_crdt(State :: #ec_dvv{}) -> #ec_dvv{}.
-reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State) ->
-    State1 = ec_crdt_util:reset(State, ?EC_RESET_ANNONYMUS_LIST),
+-spec reset_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State, ServerId) ->
+    State1 = ec_crdt_util:reset(State, ServerId, ?EC_RESET_ANNONYMUS_LIST),
     State1#ec_dvv{annonymus_list=[new_annonymus_value(Type)]}.
 
 -spec mutated_crdt(DVV :: #ec_dvv{}) -> #ec_dvv{}.

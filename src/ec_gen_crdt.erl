@@ -46,7 +46,7 @@
 -callback query_crdt(Criteria :: term(), 
 		     State :: #ec_dvv{}) -> term().
 
--callback reset_crdt(State :: #ec_dvv{}) -> #ec_dvv{}.
+-callback reset_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 
 -callback mutated_crdt(DVV :: #ec_dvv{}) -> #ec_dvv{}.
 
@@ -62,7 +62,7 @@
 	 query/2,
 	 update/4,
 	 causal_context/2,
-	 reset/1]).
+	 reset/2]).
 
 -spec new(Type :: atom(), Name :: term()) -> #ec_dvv{}.
 new(Type, Name) ->
@@ -128,9 +128,9 @@ query(State) ->
 query(Criteria, #ec_dvv{module=Mod}=State) ->
     Mod:query_crdt(Criteria, State).
 
--spec reset(DVV :: #ec_dvv{}) -> #ec_dvv{}.
-reset(#ec_dvv{module=Mod}=DVV) ->
-    DVV1 = Mod:reset_crdt(DVV),
+-spec reset(DVV :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+reset(#ec_dvv{module=Mod}=DVV, ServerId) ->
+    DVV1 = Mod:reset_crdt(DVV, ServerId),
     DVV1#ec_dvv{status=?EC_DVV_CLEAN_DELTA}.
 			
 -spec mutated(DVV :: #ec_dvv{}) -> #ec_dvv{}.

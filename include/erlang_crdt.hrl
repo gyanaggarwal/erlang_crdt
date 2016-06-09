@@ -54,8 +54,6 @@
 -define(EC_RESET_VALUES,              ec_reset_values).
 -define(EC_RESET_ANNONYMUS_LIST,      ec_reset_annonymus_list).
 -define(EC_RESET_ALL,                 ec_reset_all).
--define(EC_RESET_VALUES_ONLY,         ec_reset_values_only).
--define(EC_RESET_RETAIN_ALL,          ec_reset_retain_all).
 
 -define(EC_OPS_VAL,                   val).
 -define(EC_OPS_INC,                   inc).
@@ -91,6 +89,12 @@
 
 -define(EC_UNDEFINED,                 undefined).
 
+-define(EC_MSG_MUTATE,                msg_mutate).
+-define(EC_MSG_QUERY,                 msg_query).
+-define(EC_MSG_CAUSAL_CONTEXT,        msg_causal_context).
+-define(EC_MSG_MERGE,                 msg_merge).
+-define(EC_MSG_DELTA_INTERNAL,        msg_delta_interval).
+
 -record(ec_dot,            {replica_id=?EC_UNDEFINED   :: term() | ?EC_UNDEFINED,
 			    counter_max=0              :: non_neg_integer(),
 			    counter_min=0              :: non_neg_integer(),
@@ -102,4 +106,23 @@
 			    status=?EC_DVV_CLEAN_STATE :: term(),
 			    dot_list=[]                :: list(),
 			    annonymus_list=[]          :: list()}).
+
+-record(ec_app_config,     {node_id                    :: atom(),
+			    timeout_period=0           :: non_neg_integer(),
+			    data_dir                   :: string(),
+			    file_state_mutation        :: string(),
+			    file_delta_interval        :: string()}).
+
+-record(ec_server,         {node_id                    :: atom(),
+                            name                       :: term()}).
+
+-record(ec_system_state,   {server                     :: #ec_server{},
+                            replica_cluster            :: list(),
+			    state                      :: #ec_dvv{},
+			    delta_interval             :: #ec_dvv{},
+			    app_config                 :: #ec_app_config{}}).
+
+-record(ec_data_state,     {file_state_mutation        :: file:io_device(),
+			    file_delta_interval        :: file:io_device(),
+			    app_config                 :: #ec_app_config{}}).
 

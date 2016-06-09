@@ -26,7 +26,7 @@
 	 update_fun_crdt/1,
 	 merge_fun_crdt/1,
 	 query_crdt/2,
-	 reset_crdt/1,
+	 reset_crdt/2,
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
 	 causal_consistent_crdt/5,
@@ -81,19 +81,19 @@ query_crdt(?EC_UNDEFINED, #ec_dvv{module=?MODULE, type=Type}=State) ->
 	    lists:foldl(fun({PX, NX}, TX) -> TX+PX-NX end, 0, Values)
     end.
 
--spec reset_crdt(State :: #ec_dvv{}) -> #ec_dvv{}.
-reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State) ->
+-spec reset_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+reset_crdt(#ec_dvv{module=?MODULE, type=Type}=State, ServerId) ->
     case Type of
 	?EC_MVREGISTER ->
-	    ec_crdt_util:reset(State, ?EC_RESET_ALL);
+	    ec_crdt_util:reset(State, ServerId, ?EC_RESET_ALL);
 	?EC_EWFLAG     ->
-	    ec_crdt_util:reset(State, ?EC_RESET_ANNONYMUS_LIST);
+	    ec_crdt_util:reset(State, ServerId, ?EC_RESET_ANNONYMUS_LIST);
 	?EC_DWFLAG     ->
-	    ec_crdt_util:reset(State, ?EC_RESET_ANNONYMUS_LIST);
+	    ec_crdt_util:reset(State, ServerId, ?EC_RESET_ANNONYMUS_LIST);
 	?EC_PNCOUNTER  ->
-	    ec_crdt_util:reset(State, ?EC_RESET_ALL);
+	    ec_crdt_util:reset(State, ServerId, ?EC_RESET_ALL);
 	?EC_GCOUNTER   ->
-	    ec_crdt_util:reset(State, ?EC_RESET_ALL)
+	    ec_crdt_util:reset(State, ServerId, ?EC_RESET_ALL)
     end. 
 
 -spec mutated_crdt(DVV :: #ec_dvv{}) -> #ec_dvv{}.
