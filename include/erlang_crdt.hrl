@@ -89,6 +89,9 @@
 
 -define(EC_UNDEFINED,                 undefined).
 
+-define(EC_CRDT_SERVER,               ec_crdt_server).
+-define(EC_DATA_SERVER,               ec_data_server).
+
 -define(EC_MSG_MUTATE,                msg_mutate).
 -define(EC_MSG_QUERY,                 msg_query).
 -define(EC_MSG_CAUSAL_CONTEXT,        msg_causal_context).
@@ -109,17 +112,18 @@
 
 -record(ec_app_config,     {node_id                    :: atom(),
 			    timeout_period=0           :: non_neg_integer(),
+			    data_manager               :: atom(),
 			    data_dir                   :: string(),
 			    file_state_mutation        :: string(),
-			    file_delta_interval        :: string()}).
+			    file_delta_interval        :: string(),
+			    debug_mode=false           :: true | false,
+			    sup_restart_intensity=100  :: non_neg_integer(),
+			    sup_restart_period=1       :: non_neg_integer(),
+			    sup_child_shutdown=2000    :: non_neg_integer()}).
 
--record(ec_server,         {node_id                    :: atom(),
-                            name                       :: term()}).
-
--record(ec_system_state,   {server                     :: #ec_server{},
-                            replica_cluster            :: list(),
+-record(ec_crdt_state,     {replica_cluster            :: list(),
 			    state                      :: #ec_dvv{},
-			    delta_interval             :: #ec_dvv{},
+			    delta                      :: #ec_dvv{},
 			    app_config                 :: #ec_app_config{}}).
 
 -record(ec_data_state,     {file_state_mutation        :: file:io_device(),
