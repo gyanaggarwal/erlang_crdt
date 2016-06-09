@@ -23,7 +23,7 @@
 	 find_module/1,
 	 is_dirty/1,
 	 delta_state_pair/1,
-	 causal_consistent/5,
+	 causal_consistent/4,
 	 reset/2]).
 
 -include("erlang_crdt.hrl").
@@ -77,13 +77,12 @@ delta_state_pair({Delta, State}) ->
 	    {State, Delta}
     end.
 
--spec causal_consistent(Delta :: #ec_dvv{}, State :: #ec_dvv{}, Offset :: non_neg_integer(), ServerId :: term(), List :: list()) -> list().
+-spec causal_consistent(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), List :: list()) -> list().
 causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 		  #ec_dvv{module=Mod, type=Type, name=Name}=State,
-		  Offset,
 		  ServerId,
 		  List) ->
-    case ec_dvv:causal_consistent(Delta, State, Offset, ServerId) of
+    case ec_dvv:causal_consistent(Delta, State, ServerId) of
         ?EC_CAUSALLY_CONSISTENT -> 
 	    List;
 	Reason                  ->                 
@@ -94,9 +93,9 @@ causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 
 -spec reset_dot_list(DL :: list(), Flag :: ?EC_RESET_NONE | ?EC_RESET_VALUES | ?EC_RESET_VALUES_ONLY) -> list().
 reset_dot_list(DL, ?EC_RESET_NONE) ->
-    lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max} | Acc] end, [], DL);
+    lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max+1} | Acc] end, [], DL);
 reset_dot_list(DL, ?EC_RESET_VALUES) ->
-    lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max, values=[]} | Acc] end, [], DL);
+    lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max+1, values=[]} | Acc] end, [], DL);
 reset_dot_list(DL, ?EC_RESET_VALUES_ONLY) ->
     lists:foldl(fun(DotX, Acc) -> [DotX#ec_dot{values=[]} | Acc] end, [], DL).
 

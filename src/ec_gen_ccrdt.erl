@@ -29,7 +29,7 @@
          reset_crdt/1,
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
-         causal_consistent_crdt/6]).
+         causal_consistent_crdt/5]).
 
 -include("erlang_crdt.hrl").
 
@@ -85,26 +85,23 @@ mutated_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=DVV) ->
 
 -spec causal_consistent_crdt(Delta :: #ec_dvv{}, 
 			     State :: #ec_dvv{}, 
-			     Offset :: non_neg_integer(), 
 			     ServerId :: term(),
 			     Flag :: ?EC_LOCAL | ?EC_GLOBAL,
 			     List :: list()) -> list().
 causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, annonymus_list=[#ec_dvv{module=Mod, type=Type1, name=Name1}=DVV1]}=Delta,
 		       #ec_dvv{module=?MODULE, type=Type, name=Name, annonymus_list=[CState]}=State,
-		       Offset,
 		       ServerId,
 		       ?EC_LOCAL,
 		       List) ->
-    L1 = ec_crdt_util:causal_consistent(Delta, State, Offset, ServerId, List),
-    Mod:causal_consistent_crdt(DVV1, find_dvv({Type1, Name1}, CState), Offset, ServerId, ?EC_LOCAL, L1);
+    L1 = ec_crdt_util:causal_consistent(Delta, State, ServerId, List),
+    Mod:causal_consistent_crdt(DVV1, find_dvv({Type1, Name1}, CState), ServerId, ?EC_LOCAL, L1);
 causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, annonymus_list=[CDelta]}=Delta,
 		       #ec_dvv{module=?MODULE, type=Type, name=Name, annonymus_list=[CState]}=State,
-		       Offset,
 		       ServerId,
 		       ?EC_GLOBAL,
 		       List) ->
-    L1 = ec_crdt_util:causal_consistent(Delta, State, Offset, ServerId, List),
-    maps:fold(fun(Key, #ec_dvv{module=Mod}=DVV, Acc) -> Mod:causal_consistent_crdt(DVV, find_dvv(Key, CState), Offset, ServerId, ?EC_GLOBAL, Acc) end, L1, CDelta).
+    L1 = ec_crdt_util:causal_consistent(Delta, State, ServerId, List),
+    maps:fold(fun(Key, #ec_dvv{module=Mod}=DVV, Acc) -> Mod:causal_consistent_crdt(DVV, find_dvv(Key, CState), ServerId, ?EC_GLOBAL, Acc) end, L1, CDelta).
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> {error, ?EC_INVALID_OPERATION} | term().
 query_crdt([{Type, Name} | TCriteria], #ec_dvv{module=?MODULE, annonymus_list=[CMap]}) ->

@@ -39,7 +39,6 @@
 
 -callback causal_consistent_crdt(Delta :: #ec_dvv{}, 
 				 State :: #ec_dvv{}, 
-				 Offset :: non_neg_integer(), 
 				 ServerId :: term(),
 				 Flag :: ?EC_LOCAL | ?EC_GLOBAL,
 				 List :: list()) -> list().
@@ -90,7 +89,7 @@ merge(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
       #ec_dvv{module=Mod, type=Type, name=Name}=State, 
       ServerId) ->
     {Delta1, State1} = ec_crdt_util:delta_state_pair({Delta, State}),
-    case Mod:causal_consistent_crdt(Delta1, State1, 1, ServerId, ?EC_GLOBAL, []) of
+    case Mod:causal_consistent_crdt(Delta1, State1, ServerId, ?EC_GLOBAL, []) of
 	[]     ->
 	    State2 = ec_dvv:sync([Delta1, State1], Mod:merge_fun_crdt([Type])),
 	    State3 = ec_crdt_util:add_param(State2, State1),
@@ -109,7 +108,7 @@ mutate(Ops,
     Delta = Mod:delta_crdt(Ops, DL, State, ServerId),
     case ec_crdt_util:is_dirty(Delta) of
 	true  ->
-	    case Mod:causal_consistent_crdt(Delta, State, 0, ServerId, ?EC_LOCAL, []) of
+	    case Mod:causal_consistent_crdt(Delta, State, ServerId, ?EC_LOCAL, []) of
 		[]     ->
 		    State1 = update(Delta, State, ServerId, ?EC_DVV_DIRTY_STATE),
 		    DI1    = update(Delta, DI,    ServerId, ?EC_DVV_DIRTY_DELTA),

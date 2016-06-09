@@ -26,7 +26,7 @@
 	 update/4,
 	 values/1,
 	 join/1,
-	 causal_consistent/4,
+	 causal_consistent/3,
 	 compare_causality/2,
 	 sort_dot_list/1,
 	 replace_dot_list/2,
@@ -83,18 +83,15 @@ join(#ec_dvv{dot_list=DL}) ->
 
 -spec causal_consistent(Clock1 :: #ec_dvv{} | ?EC_UNDEFINED, 
 			Clock2 :: #ec_dvv{} | ?EC_UNDEFINED, 
-			OffSet :: non_neg_integer(), 
 			ServerId :: term()) -> ?EC_CAUSALLY_CONSISTENT | 
 					       {?EC_CAUSALLY_BEHIND, term()} | 
 					       {?EC_CAUSALLY_AHEAD, term()}.
 causal_consistent(?EC_UNDEFINED, 
 		  ?EC_UNDEFINED, 
-		  _Offset, 
 		  _ServerId) ->   
     ?EC_CAUSALLY_CONSISTENT;
 causal_consistent(?EC_UNDEFINED, 
 		  #ec_dvv{type=Type, name=Name, status=Status2, dot_list=SDL}, 
-		  _Offset, 
 		  ServerId) ->
     case find_dot(SDL, ServerId) of
         false ->
@@ -104,7 +101,6 @@ causal_consistent(?EC_UNDEFINED,
     end;
 causal_consistent(#ec_dvv{type=Type, name=Name, status=Status1, dot_list=DDL}, 
 		  ?EC_UNDEFINED, 
-		  _Offset, 
 		  ServerId) ->
     case find_dot(DDL, ServerId) of
         false                  ->
@@ -116,7 +112,6 @@ causal_consistent(#ec_dvv{type=Type, name=Name, status=Status1, dot_list=DDL},
     end;
 causal_consistent(#ec_dvv{type=Type, name=Name, status=Status1, dot_list=DDL}, 
 		  #ec_dvv{type=Type, name=Name, status=Status2, dot_list=SDL}, 
-		  Offset, 
 		  ServerId) ->
     case {find_dot(DDL, ServerId), find_dot(SDL, ServerId)} of
         {false, _}                                                                         ->
@@ -125,17 +120,17 @@ causal_consistent(#ec_dvv{type=Type, name=Name, status=Status1, dot_list=DDL},
             ?EC_CAUSALLY_CONSISTENT;
         {Dot1, false}                                                                      ->
             {?EC_CAUSALLY_AHEAD, {causal_info(Dot1, Type, Name, Status1), ?EC_UNDEFINED}};
-        {#ec_dot{counter_max=Max1, counter_min=Min1}=Dot1, #ec_dot{counter_max=Max2}=Dot2} ->
-            case (Max2 >= Min1) of
-                true  ->
-                    case (Max2 =< (Max1-Offset)) of
-                        true  ->
-                            ?EC_CAUSALLY_CONSISTENT;
-                        false ->
-                            {?EC_CAUSALLY_BEHIND, {causal_info(Dot1, Type, Name, Status1), causal_info(Dot2, Type, Name, Status2)}}
-                    end;
-                false  ->
-                    {?EC_CAUSALLY_AHEAD, {causal_info(Dot1, Type, Name, Status1), causal_info(Dot2, Type, Name, Status2)}}
+        {#ec_dot{counter_min=Min1}=Dot1, #ec_dot{counter_max=Max2}=Dot2} ->
+	    case (Min1 =:= Max2+1) of
+		true  ->
+		    ?EC_CAUSALLY_CONSISTENT;
+		false ->
+		    case (Min1 > Max2+1) of
+			true  ->
+			    {?EC_CAUSALLY_AHEAD,  {causal_info(Dot1, Type, Name, Status1), causal_info(Dot2, Type, Name, Status2)}};
+			false ->
+			    {?EC_CAUSALLY_BEHIND, {causal_info(Dot1, Type, Name, Status1), causal_info(Dot2, Type, Name, Status2)}}
+		    end
             end
     end.
 
@@ -187,7 +182,7 @@ replace_dot_list([], _Dot, true, Acc) ->
 
 -spec normalized_dot_list(DotList :: list()) ->list().
 normalized_dot_list(DotList) ->
-    lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max} | Acc] end, [], DotList).
+    lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max+1} | Acc] end, [], DotList).
 			
 -spec dot(DL :: list(), Id :: atom(), V :: term(), UpdateFun :: {fun(), fun()}) -> list().
 dot(DL, Id, V, UpdateFun) ->
