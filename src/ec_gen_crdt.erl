@@ -62,7 +62,8 @@
 	 query/2,
 	 update/4,
 	 causal_context/2,
-	 reset/2]).
+	 reset/2,
+	 causal_consistent/4]).
 
 -spec new(Type :: atom(), Name :: term()) -> #ec_dvv{}.
 new(Type, Name) ->
@@ -72,6 +73,13 @@ new(Type, Name) ->
 -spec causal_context(Ops :: term(), State :: #ec_dvv{}) -> list().
 causal_context(Ops, #ec_dvv{module=Mod}=State) ->
     Mod:causal_context_crdt(Ops, State).
+
+-spec causal_consistent(Delta ::#ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> list().
+causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
+		  #ec_dvv{module=Mod, type=Type, name=Name}=State,
+		  ServerId,
+		  Flag) ->
+    Mod:causal_consistent_crdt(Delta, State, ServerId, Flag, []).
 
 -spec merge(Delta :: #ec_dvv{}, State :: #ec_dvv{}) -> {ok, #ec_dvv{}} | {error, atom() | {atom(), #ec_dot{}}}.
 merge(#ec_dvv{module=Mod, type=Type, name=Name, dot_list=[#ec_dot{replica_id=ServerId}]}=Delta,
@@ -89,7 +97,7 @@ merge(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
       #ec_dvv{module=Mod, type=Type, name=Name}=State, 
       ServerId) ->
     {Delta1, State1} = ec_crdt_util:delta_state_pair({Delta, State}),
-    case Mod:causal_consistent_crdt(Delta1, State1, ServerId, ?EC_GLOBAL, []) of
+    case causal_consistent(Delta1, State1, ServerId, ?EC_GLOBAL) of
 	[]     ->
 	    State2 = ec_dvv:sync([Delta1, State1], Mod:merge_fun_crdt([Type])),
 	    State3 = ec_crdt_util:add_param(State2, State1),
@@ -108,7 +116,7 @@ mutate(Ops,
     Delta = Mod:delta_crdt(Ops, DL, State, ServerId),
     case ec_crdt_util:is_dirty(Delta) of
 	true  ->
-	    case Mod:causal_consistent_crdt(Delta, State, ServerId, ?EC_LOCAL, []) of
+	    case causal_consistent(Delta, State, ServerId, ?EC_LOCAL) of
 		[]     ->
 		    State1 = update(Delta, State, ServerId, ?EC_DVV_DIRTY_STATE),
 		    DI1    = update(Delta, DI,    ServerId, ?EC_DVV_DIRTY_DELTA),

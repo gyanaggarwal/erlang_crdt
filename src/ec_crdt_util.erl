@@ -24,7 +24,9 @@
 	 is_dirty/1,
 	 delta_state_pair/1,
 	 causal_consistent/4,
-	 reset/3]).
+	 reset/3,
+	 causal/2,
+	 causal_list/1]).
 
 -include("erlang_crdt.hrl").
 
@@ -82,7 +84,31 @@ causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 	    [Reason | List]
     end.
 
+-spec causal(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+causal(#ec_dvv{dot_list=DL}=State, ServerId) ->
+    NewDL = case dot_list(DL, ServerId) of
+		[]    ->
+		    [];
+		[Dot] ->
+		    [Dot#ec_dot{values=[]}]
+	    end,
+    State#ec_dvv{dot_list=NewDL, annonymus_list=[]}.
+
+-spec causal_list(List :: list()) -> list().
+causal_list(List) ->
+    causal_list(List, []).
+
 % private function
+
+-spec causal_list(List :: list(), Acc :: list()) -> list().
+causal_list([{?EC_CAUSALLY_AHEAD, {{{_, ?EC_DVV_STATE}, TN1, Dot1}, _}} | T], Acc) ->
+    causal_list(T, [{TN1, Dot1} | Acc]);
+causal_list([{?EC_CAUSALLY_AHEAD, {_, {{_, ?EC_DVV_STATE}, TN2, Dot2}}} | T], Acc) ->
+    causal_list(T, [{TN2, Dot2} | Acc]);
+causal_list([_| T], Acc) ->
+    causal_list(T, Acc);
+causal_list([], Acc) ->
+    Acc.
 
 -spec reset(DVV :: #ec_dvv{},
             Flag :: ?EC_RESET_NONE |

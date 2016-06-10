@@ -92,11 +92,13 @@
 -define(EC_CRDT_SERVER,               ec_crdt_server).
 -define(EC_DATA_SERVER,               ec_data_server).
 
+-define(EC_MSG_SETUP_REPL,            msg_setup_repl).
 -define(EC_MSG_MUTATE,                msg_mutate).
 -define(EC_MSG_QUERY,                 msg_query).
 -define(EC_MSG_CAUSAL_CONTEXT,        msg_causal_context).
 -define(EC_MSG_MERGE,                 msg_merge).
--define(EC_MSG_DELTA_INTERNAL,        msg_delta_interval).
+-define(EC_MSG_CAUSAL,                msg_causal).
+-define(EC_MSG_DELTA_INTERVAL,        msg_delta_interval).
 
 -record(ec_dot,            {replica_id=?EC_UNDEFINED   :: term() | ?EC_UNDEFINED,
 			    counter_max=0              :: non_neg_integer(),
@@ -122,8 +124,9 @@
 			    sup_child_shutdown=2000    :: non_neg_integer()}).
 
 -record(ec_crdt_state,     {replica_cluster            :: list(),
-			    state                      :: #ec_dvv{},
-			    delta                      :: #ec_dvv{},
+			    timeout_start              :: non_neg_integer(),
+			    state_dvv                  :: #ec_dvv{},
+			    delta_dvv                  :: #ec_dvv{},
 			    app_config                 :: #ec_app_config{}}).
 
 -record(ec_data_state,     {file_state_mutation        :: file:io_device(),

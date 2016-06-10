@@ -32,7 +32,7 @@
 
 -include("erlang_crdt.hrl").
 
--define(TIMEOUT_PERIOD,            10000).
+-define(TIMEOUT_PERIOD,            {milli_seconds, 10000}).
 -define(DATA_MANAGER,              ec_data_manager_api).
 -define(DATA_DIR,                  "./").
 -define(FILE_STATE_MUTATION,       "_state.data").
@@ -45,7 +45,7 @@
 -spec get_env() -> #ec_app_config{}.
 get_env() ->
   #ec_app_config{node_id                  = node(),
-                 timeout_period           = ec_config:get_env(erlang_crdt, timeout_period,           ?TIMEOUT_PERIOD),
+                 timeout_period           = ec_time_util:convert_to_milli_seconds(ec_config:get_env(erlang_crdt, timeout_period, ?TIMEOUT_PERIOD)),
                  data_manager             = ec_config:get_env(erlang_crdt, data_manager,             ?DATA_MANAGER),
 		 data_dir                 = ec_config:get_env(erlang_crdt, data_dir,                 ?DATA_DIR),
                  file_state_mutation      = ec_config:get_env(erlang_crdt, file_state_mutation,      ?FILE_STATE_MUTATION),

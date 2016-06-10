@@ -19,7 +19,10 @@
 -module(erlang_crdt).
 
 -export([start/0, 
-         stop/0]).
+         stop/0,
+	 setup_repl/1,
+	 mutate/2,
+	 query/2]).
 
 -include("erlang_crdt.hrl").
 
@@ -29,3 +32,12 @@ start() ->
 stop() ->
     application:stop(erlang_crdt).
 
+setup_repl(NodeList) ->
+    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_SETUP_REPL, NodeList}).
+
+mutate(Node, Ops) ->
+    DL = gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_CAUSAL_CONTEXT, Ops}),
+    gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_MUTATE, {Ops, DL}}).
+
+query(Node, Criteria) ->
+    gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_QUERY, Criteria}).
