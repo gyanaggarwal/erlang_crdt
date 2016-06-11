@@ -29,7 +29,8 @@
          reset_crdt/2,
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
-         causal_consistent_crdt/5]).
+         causal_consistent_crdt/5,
+	 causal_history_crdt/2]).
 
 -include("erlang_crdt.hrl").
 
@@ -103,6 +104,12 @@ causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, annonymus_l
     L1 = ec_crdt_util:causal_consistent(Delta, State, ServerId, List),
     maps:fold(fun(Key, #ec_dvv{module=Mod}=DVV, Acc) -> Mod:causal_consistent_crdt(DVV, find_dvv(Key, CState), ServerId, ?EC_GLOBAL, Acc) end, L1, CDelta).
 
+-spec causal_history_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+causal_history_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=State, ServerId) ->
+    State1 = ec_crdt_util:causal_history(State, ServerId),
+    CMap1 = maps:fold(fun(K, DVV, Map) -> causal_history_crdt_fun(K, DVV, ServerId, Map) end, maps:new(), CMap),
+    State1#ec_dvv{annonymus_list=[CMap1]}.
+
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> {error, ?EC_INVALID_OPERATION} | term().
 query_crdt([{Type, Name} | TCriteria], #ec_dvv{module=?MODULE, annonymus_list=[CMap]}) ->
     case maps:find({Type, Name}, CMap) of
@@ -146,21 +153,6 @@ find_dvv({Type, Name}, CMap) ->
 	    DVV
     end.
 
-%-spec causal_consistent_fun({Type :: atom(), Name :: term()}, 
-%			    Delta :: #ec_dvv{}, 
-%			    CState :: maps:map(), 
-%			    Offset :: non_neg_integer(), 
-%			    ServerId :: term(), 
-%			    Flag :: ?EC_LOCAL | ?EC_GLOBAL,
-%			    Acc :: list()) -> list().
-%causal_consistent_fun({Type, Name}, #ec_dvv{module=Mod, type=Type, name=Name}=Delta, CState, Offset, ServerId, Flag, Acc) ->
-%    case Mod:causal_consistent_crdt(Delta, find_dvv({Type, Name}, CState), Offset, ServerId, Flag) of
-%	?EC_CAUSALLY_CONSISTENT ->
-%	    Acc;
-%	Reason                  ->
-%	    [Reason | Acc]
-%    end.
-
 -spec mutated_crdt_fun(K :: term(), DVV :: #ec_dvv{}, Map :: maps:map()) -> maps:map().
 mutated_crdt_fun(K, DVV, Map) ->
     DVV1 = ec_gen_crdt:mutated(DVV),
@@ -170,5 +162,9 @@ mutated_crdt_fun(K, DVV, Map) ->
 	false ->
 	    Map
     end.
-    
+
+-spec causal_history_crdt_fun(K :: term(), DVV :: #ec_dvv{}, ServerId :: term(), Map :: maps:map()) -> maps:map().
+causal_history_crdt_fun(K, DVV, ServerId, Map) ->    
+    DVV1 = ec_gen_crdt:causal_history(DVV, ServerId),
+    maps:put(K, DVV1, Map).
 

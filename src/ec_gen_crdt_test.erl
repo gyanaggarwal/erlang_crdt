@@ -118,6 +118,29 @@ data_compmap02() ->
 	   {mutate, {{?EC_COMPMAP, cm01}, {mutate, {{?EC_PWORMAP,    pws2}, {put, {k12, v255}}}}}}],
     {?EC_COMPMAP, ?EC_UNDEFINED, L11, L13, L15, L25}.
 
+data_compmap03() ->
+    L11 = [{mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 1}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 2}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc2}, {inc, 3}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc2}, {inc, 4}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc3}, {inc, 5}}}],
+    L13 = [{mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 1}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 2}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc2}, {inc, 3}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc3}, {inc, 4}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc3}, {inc, 5}}}],
+    L15 = [{mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 1}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc3}, {inc, 2}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc2}, {inc, 3}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc2}, {inc, 4}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc3}, {inc, 5}}}],
+    L25 = [{mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 1}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc1}, {inc, 2}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc2}, {inc, 3}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc2}, {inc, 4}}},
+           {mutate, {{?EC_PNCOUNTER,  pnc3}, {inc, 5}}}],
+    {?EC_COMPMAP, ?EC_UNDEFINED, L11, L13, L15, L25}.
+
 query_test0(Data) ->
     query_test0(Data, ?EC_UNDEFINED).
 

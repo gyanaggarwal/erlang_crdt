@@ -25,13 +25,13 @@
 -include("erlang_crdt.hrl").
 
 merge(NodeList, NodeId, #ec_dvv{}=Delta) ->
-    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_MERGE, {NodeId, Delta}}).
+    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_MERGE, {NodeId, [Delta]}}).
 
 causal(NodeList, NodeId, #ec_dvv{}=CausalDvv) ->
     gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_CAUSAL, {NodeId, CausalDvv}}).
 
-delta_interval(Node, NodeId, CausalList) ->
-    gen_server:cast({?EC_CRDT_SERVER, Node}, {?EC_MSG_DELTA_INTERVAL, {NodeId, CausalList}}).
+delta_interval(Node, NodeId, CausalDvv) ->
+    gen_server:cast({?EC_CRDT_SERVER, Node}, {?EC_MSG_DELTA_INTERVAL, {NodeId, CausalDvv}}).
 
 
 

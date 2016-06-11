@@ -22,7 +22,9 @@
          stop/0,
 	 setup_repl/1,
 	 mutate/2,
-	 query/2]).
+	 query/2,
+	 stop/1,
+	 resume/1]).
 
 -include("erlang_crdt.hrl").
 
@@ -41,3 +43,9 @@ mutate(Node, Ops) ->
 
 query(Node, Criteria) ->
     gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_QUERY, Criteria}).
+
+stop(Node) ->
+    gen_server:call({?EC_CRDT_SERVER, Node}, ?EC_MSG_STOP).
+
+resume(Node) ->
+    gen_server:call({?EC_CRDT_SERVER, Node}, ?EC_MSG_RESUME).

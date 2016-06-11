@@ -46,12 +46,17 @@
 -callback query_crdt(Criteria :: term(), 
 		     State :: #ec_dvv{}) -> term().
 
--callback reset_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+-callback reset_crdt(State :: #ec_dvv{}, 
+		     ServerId :: term()) -> #ec_dvv{}.
 
 -callback mutated_crdt(DVV :: #ec_dvv{}) -> #ec_dvv{}.
 
 -callback causal_context_crdt(Ops :: term(), 
 			      State :: #ec_dvv{}) -> list().
+
+-callback causal_history_crdt(State :: #ec_dvv{},
+			      ServerId :: term()) -> #ec_dvv{}.
+     
 
 -export([new/2,
 	 merge/2,
@@ -63,7 +68,8 @@
 	 update/4,
 	 causal_context/2,
 	 reset/2,
-	 causal_consistent/4]).
+	 causal_consistent/4,
+	 causal_history/2]).
 
 -spec new(Type :: atom(), Name :: term()) -> #ec_dvv{}.
 new(Type, Name) ->
@@ -73,6 +79,10 @@ new(Type, Name) ->
 -spec causal_context(Ops :: term(), State :: #ec_dvv{}) -> list().
 causal_context(Ops, #ec_dvv{module=Mod}=State) ->
     Mod:causal_context_crdt(Ops, State).
+
+-spec causal_history(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+causal_history(#ec_dvv{module=Mod}=State, ServerId) ->
+    Mod:causal_history_crdt(State, ServerId).
 
 -spec causal_consistent(Delta ::#ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> list().
 causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,

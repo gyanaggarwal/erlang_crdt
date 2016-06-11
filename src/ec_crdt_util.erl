@@ -25,8 +25,8 @@
 	 delta_state_pair/1,
 	 causal_consistent/4,
 	 reset/3,
-	 causal/2,
-	 causal_list/1]).
+	 causal_history/2,
+	 causal_dvv/2]).
 
 -include("erlang_crdt.hrl").
 
@@ -84,8 +84,8 @@ causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 	    [Reason | List]
     end.
 
--spec causal(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
-causal(#ec_dvv{dot_list=DL}=State, ServerId) ->
+-spec causal_history(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
+causal_history(#ec_dvv{dot_list=DL}=State, ServerId) ->
     NewDL = case dot_list(DL, ServerId) of
 		[]    ->
 		    [];
@@ -94,21 +94,36 @@ causal(#ec_dvv{dot_list=DL}=State, ServerId) ->
 	    end,
     State#ec_dvv{dot_list=NewDL, annonymus_list=[]}.
 
--spec causal_list(List :: list()) -> list().
-causal_list(List) ->
-    causal_list(List, []).
+-spec causal_dvv(Tag :: ?EC_CAUSALLY_AHEAD | ?EC_CAUSALLY_BEHIND, List :: list()) -> #ec_dvv{}.
+causal_dvv(Tag, List) ->
+    causal_dvv(Tag, lists:reverse(List), ?EC_UNDEFINED).
 
 % private function
 
--spec causal_list(List :: list(), Acc :: list()) -> list().
-causal_list([{?EC_CAUSALLY_AHEAD, {{{_, ?EC_DVV_STATE}, TN1, Dot1}, _}} | T], Acc) ->
-    causal_list(T, [{TN1, Dot1} | Acc]);
-causal_list([{?EC_CAUSALLY_AHEAD, {_, {{_, ?EC_DVV_STATE}, TN2, Dot2}}} | T], Acc) ->
-    causal_list(T, [{TN2, Dot2} | Acc]);
-causal_list([_| T], Acc) ->
-    causal_list(T, Acc);
-causal_list([], Acc) ->
-    Acc.
+-spec causal_dvv(Tag :: ?EC_CAUSALLY_AHEAD | ?EC_CAUSALLY_BEHIND, List :: list(), DVV :: #ec_dvv{} | ?EC_UNDEFINED) -> #ec_dvv{}.
+causal_dvv(Tag, [{Tag, {{{_, ?EC_DVV_STATE}, {Type1, Name1}, Dot1}, _}} | T], ?EC_UNDEFINED) ->
+    causal_dvv(Tag, T, make_causal_dvv1(Type1, Name1, Dot1));
+causal_dvv(Tag, [{Tag, {_, {{_, ?EC_DVV_STATE}, {Type2, Name2}, Dot2}}} | T], ?EC_UNDEFINED) ->
+    causal_dvv(Tag, T, make_causal_dvv1(Type2, Name2, Dot2));
+causal_dvv(Tag, [{Tag, {{{_, ?EC_DVV_STATE}, {Type1, Name1}, Dot1}, _}} | T], #ec_dvv{type=?EC_COMPMAP}=DVV0) ->
+    causal_dvv(Tag, T, make_causal_dvv2(Type1, Name1, Dot1, DVV0));
+causal_dvv(Tag, [{Tag, {_, {{_, ?EC_DVV_STATE}, {Type2, Name2}, Dot2}}} | T], #ec_dvv{type=?EC_COMPMAP}=DVV0) ->
+    causal_dvv(Tag, T, make_causal_dvv2(Type2, Name2, Dot2, DVV0));
+causal_dvv(Tag, [_| T], DVV) ->
+    causal_dvv(Tag, T, DVV);
+causal_dvv(_Tag, [], DVV) ->
+    DVV.
+
+-spec make_causal_dvv1(Type :: atom(), Name :: term(), Dot :: #ec_dot{}) -> #ec_dvv{}.
+make_causal_dvv1(Type, Name, #ec_dot{}=Dot) ->
+    DVV = ec_gen_crdt:new(Type, Name),
+    DVV#ec_dvv{dot_list=[Dot]}.
+
+-spec make_causal_dvv2(Type :: atom(), Name :: term(), Dot :: #ec_dot{}, DVV :: #ec_dvv{}) -> #ec_dvv{}.
+make_causal_dvv2(Type, Name, Dot, #ec_dvv{type=?EC_COMPMAP, annonymus_list=[CMap]}=DVV) ->
+    DVV1 = make_causal_dvv1(Type, Name, Dot),
+    CMap1 = maps:put({Type, Name}, DVV1, CMap),
+    DVV#ec_dvv{annonymus_list=[CMap1]}.
 
 -spec reset(DVV :: #ec_dvv{},
             Flag :: ?EC_RESET_NONE |

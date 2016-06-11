@@ -88,6 +88,8 @@
 -define(EC_DVV_DIRTY_DELTA,           {?EC_DVV_DIRTY, ?EC_DVV_DELTA}).
 
 -define(EC_UNDEFINED,                 undefined).
+-define(EC_ACTIVE,                    active).
+-define(EC_INACTIVE,                  in_active).
 
 -define(EC_CRDT_SERVER,               ec_crdt_server).
 -define(EC_DATA_SERVER,               ec_data_server).
@@ -99,6 +101,8 @@
 -define(EC_MSG_MERGE,                 msg_merge).
 -define(EC_MSG_CAUSAL,                msg_causal).
 -define(EC_MSG_DELTA_INTERVAL,        msg_delta_interval).
+-define(EC_MSG_STOP,                  msg_stop).
+-define(EC_MSG_RESUME,                msg_resume).
 
 -record(ec_dot,            {replica_id=?EC_UNDEFINED   :: term() | ?EC_UNDEFINED,
 			    counter_max=0              :: non_neg_integer(),
@@ -123,7 +127,8 @@
 			    sup_restart_period=1       :: non_neg_integer(),
 			    sup_child_shutdown=2000    :: non_neg_integer()}).
 
--record(ec_crdt_state,     {replica_cluster            :: list(),
+-record(ec_crdt_state,     {status=?EC_INACTIVE        :: ?EC_INACTIVE | ?EC_ACTIVE,
+			    replica_cluster            :: list(),
 			    timeout_start              :: non_neg_integer(),
 			    state_dvv                  :: #ec_dvv{},
 			    delta_dvv                  :: #ec_dvv{},
