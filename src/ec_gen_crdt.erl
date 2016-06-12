@@ -56,6 +56,9 @@
 
 -callback causal_history_crdt(State :: #ec_dvv{},
 			      ServerId :: term()) -> #ec_dvv{}.
+
+-callback change_status_crdt(State :: #ec_dvv{},
+			     Status :: term()) -> #ec_dvv{}.
      
 
 -export([new/2,
@@ -69,7 +72,8 @@
 	 causal_context/2,
 	 reset/2,
 	 causal_consistent/4,
-	 causal_history/2]).
+	 causal_history/2,
+	 change_status/2]).
 
 -spec new(Type :: atom(), Name :: term()) -> #ec_dvv{}.
 new(Type, Name) ->
@@ -83,6 +87,10 @@ causal_context(Ops, #ec_dvv{module=Mod}=State) ->
 -spec causal_history(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 causal_history(#ec_dvv{module=Mod}=State, ServerId) ->
     Mod:causal_history_crdt(State, ServerId).
+
+-spec change_status(DVV :: #ec_dvv{}, Status :: term()) -> #ec_dvv{}.
+change_status(#ec_dvv{module=Mod}=DVV, Status) ->
+    Mod:change_status_crdt(DVV, Status).
 
 -spec causal_consistent(Delta ::#ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> list().
 causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
@@ -112,7 +120,7 @@ merge(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 	    State2 = ec_dvv:sync([Delta1, State1], Mod:merge_fun_crdt([Type])),
 	    State3 = ec_crdt_util:add_param(State2, State1),
 	    State4 = Mod:reconcile_crdt(State3, ServerId, ?EC_GLOBAL, ?EC_DVV_DIRTY_STATE),
-	    {ok, ec_crdt_util:add_param(State4#ec_dvv{status=?EC_DVV_DIRTY_STATE}, State1)};
+	    {ok, change_status(ec_crdt_util:add_param(State4, State1), ?EC_DVV_DIRTY_STATE)};
 	Reason ->
 	    {error, Reason}
     end.

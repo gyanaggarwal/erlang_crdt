@@ -24,7 +24,8 @@
 	 mutate/2,
 	 query/2,
 	 stop/1,
-	 resume/1]).
+	 resume/1,
+	 pretty_query/2]).
 
 -include("erlang_crdt.hrl").
 
@@ -38,14 +39,23 @@ setup_repl(NodeList) ->
     gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_SETUP_REPL, NodeList}).
 
 mutate(Node, Ops) ->
-    DL = gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_CAUSAL_CONTEXT, Ops}),
-    gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_MUTATE, {Ops, DL}}).
+    case gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_CAUSAL_CONTEXT, Ops}) of
+	{error, Reason} ->
+	    {error, Reason};
+	DL              ->
+	    gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_MUTATE, {Ops, DL}})
+    end.
 
 query(Node, Criteria) ->
     gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_QUERY, Criteria}).
+
+% only for demo
 
 stop(Node) ->
     gen_server:call({?EC_CRDT_SERVER, Node}, ?EC_MSG_STOP).
 
 resume(Node) ->
     gen_server:call({?EC_CRDT_SERVER, Node}, ?EC_MSG_RESUME).
+
+pretty_query(Node, Criteria) ->
+    ec_sets_util:pretty(query(Node, Criteria)).

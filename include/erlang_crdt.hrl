@@ -99,42 +99,46 @@
 -define(EC_MSG_QUERY,                 msg_query).
 -define(EC_MSG_CAUSAL_CONTEXT,        msg_causal_context).
 -define(EC_MSG_MERGE,                 msg_merge).
--define(EC_MSG_CAUSAL,                msg_causal).
--define(EC_MSG_DELTA_INTERVAL,        msg_delta_interval).
+-define(EC_MSG_CAUSAL_HISTORY,        msg_causal_history).
 -define(EC_MSG_STOP,                  msg_stop).
 -define(EC_MSG_RESUME,                msg_resume).
 
--record(ec_dot,            {replica_id=?EC_UNDEFINED   :: term() | ?EC_UNDEFINED,
-			    counter_max=0              :: non_neg_integer(),
-			    counter_min=0              :: non_neg_integer(),
-			    values=[]                  :: list()}).
+-define(EC_MSG_WRITE_DI,              msg_write_di).
+-define(EC_MSG_READ_DI,               msg_read_di).
 
--record(ec_dvv,            {module                     :: atom(),
-			    type                       :: atom(),
-			    name                       :: atom(),
-			    status=?EC_DVV_CLEAN_STATE :: term(),
-			    dot_list=[]                :: list(),
-			    annonymus_list=[]          :: list()}).
+-record(ec_dot,            {replica_id=?EC_UNDEFINED         :: term() | ?EC_UNDEFINED,
+			    counter_max=0                    :: non_neg_integer(),
+			    counter_min=0                    :: non_neg_integer(),
+			    values=[]                        :: list()}).
 
--record(ec_app_config,     {node_id                    :: atom(),
-			    timeout_period=0           :: non_neg_integer(),
-			    data_manager               :: atom(),
-			    data_dir                   :: string(),
-			    file_state_mutation        :: string(),
-			    file_delta_interval        :: string(),
-			    debug_mode=false           :: true | false,
-			    sup_restart_intensity=100  :: non_neg_integer(),
-			    sup_restart_period=1       :: non_neg_integer(),
-			    sup_child_shutdown=2000    :: non_neg_integer()}).
+-record(ec_dvv,            {module                           :: atom(),
+			    type                             :: atom(),
+			    name                             :: atom(),
+			    status=?EC_DVV_CLEAN_STATE       :: {atom(), atom()},
+			    dot_list=[]                      :: list(),
+			    annonymus_list=[]                :: list()}).
 
--record(ec_crdt_state,     {status=?EC_INACTIVE        :: ?EC_INACTIVE | ?EC_ACTIVE,
-			    replica_cluster            :: list(),
-			    timeout_start              :: non_neg_integer(),
-			    state_dvv                  :: #ec_dvv{},
-			    delta_dvv                  :: #ec_dvv{},
-			    app_config                 :: #ec_app_config{}}).
+-record(ec_app_config,     {node_id                          :: atom(),
+			    timeout_period=0                 :: non_neg_integer(),
+			    data_manager                     :: atom(),
+			    data_dir                         :: string(),
+			    file_state_mutation              :: string(),
+			    file_delta_interval              :: string(),
+			    debug_mode=false                 :: true | false,
+			    sup_restart_intensity=100        :: non_neg_integer(),
+			    sup_restart_period=1             :: non_neg_integer(),
+			    sup_child_shutdown=2000          :: non_neg_integer()}).
 
--record(ec_data_state,     {file_state_mutation        :: file:io_device(),
-			    file_delta_interval        :: file:io_device(),
-			    app_config                 :: #ec_app_config{}}).
+-record(ec_crdt_state,     {status=?EC_INACTIVE              :: ?EC_INACTIVE | ?EC_ACTIVE,
+			    replica_cluster                  :: list(),
+			    timeout_start                    :: non_neg_integer(),
+			    state_dvv                        :: #ec_dvv{},
+			    delta_dvv                        :: #ec_dvv{},
+			    last_msg                         :: atom(),
+			    app_config                       :: #ec_app_config{}}).
+
+-record(ec_data_state,     {data=queue:new()                 :: queue:queue(),
+			    file_state_mutation              :: file:io_device(),
+			    file_delta_interval              :: file:io_device(),
+			    app_config                       :: #ec_app_config{}}).
 

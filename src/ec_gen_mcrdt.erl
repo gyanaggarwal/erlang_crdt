@@ -31,6 +31,7 @@
 	 causal_context_crdt/2,
 	 causal_consistent_crdt/5,
 	 causal_history_crdt/2,
+	 change_status_crdt/2,
 	 add_gcounter/3,
 	 add_pncounter/3,
 	 merge_pncounter/3,
@@ -68,6 +69,10 @@ causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name}=Delta,
 causal_history_crdt(#ec_dvv{module=?MODULE}=State, ServerId) ->
     ec_crdt_util:causal_history(State, ServerId).
     
+-spec change_status_crdt(DVV :: #ec_dvv{}, Status :: term()) -> #ec_dvv{}.
+change_status_crdt(#ec_dvv{module=?MODULE}=DVV, Status) ->
+    DVV#ec_dvv{status=Status}.
+
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> term().
 query_crdt([], #ec_dvv{module=?MODULE}=State) ->
     query_crdt(?EC_UNDEFINED, State);

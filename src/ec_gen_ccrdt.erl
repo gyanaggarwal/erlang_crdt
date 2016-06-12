@@ -30,7 +30,8 @@
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
          causal_consistent_crdt/5,
-	 causal_history_crdt/2]).
+	 causal_history_crdt/2,
+	 change_status_crdt/2]).
 
 -include("erlang_crdt.hrl").
 
@@ -106,9 +107,19 @@ causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, annonymus_l
 
 -spec causal_history_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 causal_history_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=State, ServerId) ->
-    State1 = ec_crdt_util:causal_history(State, ServerId),
-    CMap1 = maps:fold(fun(K, DVV, Map) -> causal_history_crdt_fun(K, DVV, ServerId, Map) end, maps:new(), CMap),
-    State1#ec_dvv{annonymus_list=[CMap1]}.
+    case ec_crdt_util:causal_history(State, ServerId) of
+	?EC_UNDEFINED ->
+	    ?EC_UNDEFINED;
+	State1        ->
+	    CMap1 = maps:fold(fun(KX, DVVX, Map) -> causal_history_crdt_fun(KX, DVVX, ServerId, Map) end, maps:new(), CMap),
+	    State1#ec_dvv{annonymus_list=[CMap1]}
+    end.
+
+-spec change_status_crdt(DVV :: #ec_dvv{}, Status :: term()) -> #ec_dvv{}.
+change_status_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=DVV, Status) ->    
+    DVV1 = DVV#ec_dvv{status=Status},
+    CMap1 = maps:fold(fun(KX, DVVX, Map) -> change_status_crdt_fun(KX, DVVX, Status, Map) end, maps:new(), CMap),
+    DVV1#ec_dvv{annonymus_list=[CMap1]}.
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> {error, ?EC_INVALID_OPERATION} | term().
 query_crdt([{Type, Name} | TCriteria], #ec_dvv{module=?MODULE, annonymus_list=[CMap]}) ->
@@ -136,13 +147,18 @@ new_annonymus_value() ->
 
 -spec merge_map_fun({Type1 :: atom(), Name1 :: term()}, DVV1 :: #ec_dvv{}, CMap2 :: maps:map(), ServerId :: term()) -> maps:map().
 merge_map_fun({Type1, Name1}, #ec_dvv{module=Mod, type=Type1, name=Name1}=DVV1, CMap2, ServerId) ->
-    {ok, DVV3} = case maps:find({Type1, Name1}, CMap2) of
+    {ok, DVV4} = case maps:find({Type1, Name1}, CMap2) of
 		     error ->
 			 {ok, DVV1};
 		     {ok, #ec_dvv{module=Mod, type=Type1, name=Name1}=DVV2} ->
-			 ec_gen_crdt:merge(DVV1, DVV2, ServerId)
+			 case ec_gen_crdt:merge(DVV1, DVV2, ServerId) of
+			     {error, _} ->
+				 {ok, DVV1};
+			     {ok, DVV3} ->
+				 {ok, DVV3}
+			 end
                  end,
-    maps:put({Type1, Name1}, DVV3, CMap2).
+    maps:put({Type1, Name1}, DVV4, CMap2).
 
 -spec find_dvv({Type :: atom(), Name :: term()}, CMap :: maps:map()) -> #ec_dvv{} | ?EC_UNDEFINED.
 find_dvv({Type, Name}, CMap) ->
@@ -165,6 +181,15 @@ mutated_crdt_fun(K, DVV, Map) ->
 
 -spec causal_history_crdt_fun(K :: term(), DVV :: #ec_dvv{}, ServerId :: term(), Map :: maps:map()) -> maps:map().
 causal_history_crdt_fun(K, DVV, ServerId, Map) ->    
-    DVV1 = ec_gen_crdt:causal_history(DVV, ServerId),
+    case ec_gen_crdt:causal_history(DVV, ServerId) of
+	?EC_UNDEFINED ->
+	    Map;
+	DVV1          ->
+	    maps:put(K, DVV1, Map)
+    end.
+
+-spec change_status_crdt_fun(K :: term(), DVV :: #ec_dvv{}, Status :: term(), Map :: maps:map()) -> maps:map().
+change_status_crdt_fun(K, DVV, Status, Map) ->     
+    DVV1 = ec_gen_crdt:change_status(DVV, Status),
     maps:put(K, DVV1, Map).
 

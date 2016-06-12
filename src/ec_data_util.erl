@@ -16,23 +16,34 @@
 %% under the License.                                                                                    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                                             
 
--module(ec_crdt_peer_api).
+-module(ec_data_util).
 
--export([merge/3, 
-	 causal_history/3]).
+-export([get_delta_interval/3]).
 
 -include("erlang_crdt.hrl").
 
-merge(NodeList, NodeId, DeltaList) ->
-    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_MERGE, {NodeId, DeltaList}}).
+-spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{}, ServerId :: term()) -> list().
+get_delta_interval(Q0, #ec_dvv{}=CH, ServerId) ->
+    get_delta_interval(Q0, CH, ServerId, false, []).
 
-causal_history(NodeList, NodeId, #ec_dvv{}=CausalHistory) ->
-    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_CAUSAL_HISTORY, {NodeId, CausalHistory}}).
+% private function
 
-
-
-
-
+-spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{}, ServerId :: term(), Flag :: true | false, Acc :: list()) -> list().
+get_delta_interval(Q0, #ec_dvv{}=CH, ServerId, Flag, Acc) -> 
+    case {queue:out(Q0), Flag} of
+	{{empty, _}, _}            ->
+	    lists:reverse(Acc);
+	{{{value, DI}, Q1}, true}  ->
+	    get_delta_interval(Q1, CH, ServerId, Flag, [DI | Acc]);
+	{{{value, DI}, Q1}, false} ->
+	    case ec_gen_crdt:causal_consistent(DI, CH, ServerId, ?EC_GLOBAL) of
+		[] ->
+		    get_delta_interval(Q1, CH, ServerId, true, [DI | Acc]);
+		_  ->
+		    get_delta_interval(Q1, CH, ServerId, Flag, Acc)
+            end
+    end.
+ 
 
 
 

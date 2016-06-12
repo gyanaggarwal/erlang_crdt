@@ -16,20 +16,13 @@
 %% under the License.                                                                                    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                                             
 
--module(ec_crdt_peer_api).
-
--export([merge/3, 
-	 causal_history/3]).
+-module(ec_data_manager).
 
 -include("erlang_crdt.hrl").
 
-merge(NodeList, NodeId, DeltaList) ->
-    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_MERGE, {NodeId, DeltaList}}).
+-callback write_delta_interval(DI :: #ec_dvv{}) -> ok.
 
-causal_history(NodeList, NodeId, #ec_dvv{}=CausalHistory) ->
-    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_CAUSAL_HISTORY, {NodeId, CausalHistory}}).
-
-
+-callback read_delta_interval(CH :: #ec_dvv{}, ServerId :: term()) -> list().
 
 
 

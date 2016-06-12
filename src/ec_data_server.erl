@@ -38,10 +38,14 @@ init([AppConfig]) ->
     State = #ec_data_state{app_config=AppConfig},
     {ok, State}.
 
-handle_call(_Msg,
+handle_call({?EC_MSG_WRITE_DI, #ec_dvv{}=DI},
             _From, 
-            #ec_data_state{}=State) ->
-    {reply, ok, State}.
+            #ec_data_state{data=DQ}=State) ->
+    {reply, ok, State#ec_data_state{data=queue:in(DI, DQ)}};
+handle_call({?EC_MSG_READ_DI, {#ec_dvv{}=CH, ServerId}},
+	    _From,
+	    #ec_data_state{data=DQ}=State) ->
+    {reply, ec_data_util:get_delta_interval(DQ, CH, ServerId), State}.
 
 handle_cast({stop, Reason}, 
 	    #ec_data_state{}=State) ->

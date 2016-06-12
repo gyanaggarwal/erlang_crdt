@@ -286,6 +286,81 @@ test_compmap03() ->
      
     {R1, R2, R3}.
 
+get_node_list() ->
+    ['n1@Gyanendras-MacBook-Pro',
+     'n2@Gyanendras-MacBook-Pro',
+     'n3@Gyanendras-MacBook-Pro'].
+
+mutate01() ->
+    [N1, N2, N3] = NL = get_node_list(),
+    
+    erlang_crdt:setup_repl(NL),
+
+    timer:sleep(2000),
+    
+    erlang_crdt:mutate(N1, {mutate, {{ec_aworset,   asc1}, {add, v11}}}),
+    erlang_crdt:mutate(N2, {mutate, {{ec_aworset,   asc1}, {add, v11}}}),
+    erlang_crdt:mutate(N3, {mutate, {{ec_aworset,   asc1}, {add, v11}}}),
+    
+    erlang_crdt:mutate(N1, {mutate, {{ec_aworset,   asc1}, {add, v21}}}),
+    erlang_crdt:mutate(N2, {mutate, {{ec_aworset,   asc1}, {add, v22}}}),
+    erlang_crdt:mutate(N3, {mutate, {{ec_aworset,   asc1}, {add, v23}}}),
+    
+    erlang_crdt:mutate(N1, {mutate, {{ec_pncounter, pcn1}, {inc, 50}}}),
+    erlang_crdt:mutate(N2, {mutate, {{ec_pncounter, pcn2}, {dec, 30}}}),
+    erlang_crdt:mutate(N3, {mutate, {{ec_pncounter, pcn3}, {inc, 40}}}),
+    
+    erlang_crdt:mutate(N1, {mutate, {{ec_pncounter, pcn1}, {dec, 10}}}),
+    erlang_crdt:mutate(N2, {mutate, {{ec_pncounter, pcn2}, {inc, 60}}}),
+    erlang_crdt:mutate(N3, {mutate, {{ec_pncounter, pcn3}, {dec, 20}}}).
+
+mutate02() ->
+    [N1, N2, N3] = get_node_list(),
+    
+    erlang_crdt:mutate(N1, {mutate, {{ec_gcounter,  gcn1}, {inc, 50}}}),
+    erlang_crdt:mutate(N2, {mutate, {{ec_gcounter,  gcn2}, {inc, 30}}}),
+    erlang_crdt:mutate(N3, {mutate, {{ec_gcounter,  gcn3}, {inc, 40}}}),
+    
+    erlang_crdt:mutate(N1, {mutate, {{ec_gcounter,  gcn1}, {inc, 10}}}),
+    erlang_crdt:mutate(N2, {mutate, {{ec_gcounter,  gcn2}, {inc, 60}}}),
+    erlang_crdt:mutate(N3, {mutate, {{ec_gcounter,  gcn3}, {inc, 20}}}),
+    
+    erlang_crdt:stop(N3).
+
+mutate03() ->
+    [N1, N2, _N3] = get_node_list(),
+    
+    erlang_crdt:mutate(N1, {mutate, {{ec_gcounter,  gcn5}, {inc, 50}}}),
+    erlang_crdt:mutate(N2, {mutate, {{ec_gcounter,  gcn4}, {inc, 30}}}),
+    
+    erlang_crdt:mutate(N1, {mutate, {{ec_gcounter,  gcn1}, {inc, 10}}}),
+    erlang_crdt:mutate(N2, {mutate, {{ec_gcounter,  gcn2}, {inc, 60}}}).
+
+test_merge01() -> 
+    DA01 = ec_gen_crdt:new(?EC_AWORSET, awsc10),
+    DotA01 = #ec_dot{replica_id=n2, counter_max=2, counter_min=1},
+    DA02 = DA01#ec_dvv{status=?EC_DVV_DIRTY_DELTA, dot_list=[DotA01]},
+
+    DP01 = ec_gen_crdt:new(?EC_PNCOUNTER, pcn2),
+    DotP01 = #ec_dot{replica_id=n2, counter_max=2, counter_min=1, values=[{60,30}]},
+    DP02 = DP01#ec_dvv{status=?EC_DVV_DIRTY_DELTA, dot_list=[DotP01]},
+    
+    DC01 = ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),    
+    DotC01 = #ec_dot{replica_id=n2, counter_max=4, counter_min=1},
+    DC02 = DC01#ec_dvv{status=?EC_DVV_DIRTY_DELTA, dot_list=[DotC01]},
+    #ec_dvv{annonymus_list=[CMap0]} = DC02,
+    CMap1 = maps:put({DA02#ec_dvv.type, DA02#ec_dvv.name}, DA02, CMap0),
+    CMap2 = maps:put({DP02#ec_dvv.type, DP02#ec_dvv.name}, DP02, CMap1),
+    DC03 = DC02#ec_dvv{annonymus_list=[CMap2]},
+    DC03.
+
+    
+    
+
+
+
+
+    
     
     
     

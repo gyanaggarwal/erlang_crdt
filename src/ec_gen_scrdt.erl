@@ -30,7 +30,8 @@
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
 	 causal_consistent_crdt/5,
-	 causal_history_crdt/2]).
+	 causal_history_crdt/2,
+	 change_status_crdt/2]).
 	 
 -include("erlang_crdt.hrl").
 
@@ -109,6 +110,10 @@ causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name}=Delta,
 -spec causal_history_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 causal_history_crdt(#ec_dvv{module=?MODULE}=State, ServerId) ->
     ec_crdt_util:causal_history(State, ServerId).
+
+-spec change_status_crdt(DVV :: #ec_dvv{}, Status :: term()) -> #ec_dvv{}.
+change_status_crdt(#ec_dvv{module=?MODULE}=DVV,Status) ->    
+    DVV#ec_dvv{status=Status}.
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> sets:set() | maps:map() | {ok, term()} | error.
 query_crdt([Criteria], #ec_dvv{module=?MODULE}=State)                                            ->
