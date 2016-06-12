@@ -286,13 +286,12 @@ test_compmap03() ->
      
     {R1, R2, R3}.
 
-get_node_list() ->
-    ['n1@Gyanendras-MacBook-Pro',
-     'n2@Gyanendras-MacBook-Pro',
-     'n3@Gyanendras-MacBook-Pro'].
-
+get_node_list(List) ->
+    L1 = lists:dropwhile(fun(X) -> X =/= $@ end, atom_to_list(node())),
+    lists:map(fun(X) -> list_to_atom(atom_to_list(X) ++ L1) end, List).
+		      
 mutate01() ->
-    [N1, N2, N3] = NL = get_node_list(),
+    [N1, N2, N3] = NL = get_node_list([n1, n2, n3]),
     
     erlang_crdt:setup_repl(NL),
 
@@ -315,7 +314,7 @@ mutate01() ->
     erlang_crdt:mutate(N3, {mutate, {{ec_pncounter, pcn3}, {dec, 20}}}).
 
 mutate02() ->
-    [N1, N2, N3] = get_node_list(),
+    [N1, N2, N3] = get_node_list([n1, n2, n3]),
     
     erlang_crdt:mutate(N1, {mutate, {{ec_gcounter,  gcn1}, {inc, 50}}}),
     erlang_crdt:mutate(N2, {mutate, {{ec_gcounter,  gcn2}, {inc, 30}}}),
@@ -328,13 +327,19 @@ mutate02() ->
     erlang_crdt:stop(N3).
 
 mutate03() ->
-    [N1, N2, _N3] = get_node_list(),
+    [N1, N2, _N3] = get_node_list([n1, n2, n3]),
     
     erlang_crdt:mutate(N1, {mutate, {{ec_gcounter,  gcn5}, {inc, 50}}}),
     erlang_crdt:mutate(N2, {mutate, {{ec_gcounter,  gcn4}, {inc, 30}}}),
     
     erlang_crdt:mutate(N1, {mutate, {{ec_gcounter,  gcn1}, {inc, 10}}}),
     erlang_crdt:mutate(N2, {mutate, {{ec_gcounter,  gcn2}, {inc, 60}}}).
+
+mutate04() ->   
+    [_N1, N2, _N3] = get_node_list([n1, n2, n3]),
+    
+     erlang_crdt:mutate(N2, {mutate, {{ec_gcounter,  gcn4}, {inc, 30}}}),
+     erlang_crdt:mutate(N2, {mutate, {{ec_gcounter,  gcn2}, {inc, 60}}}).
 
 test_merge01() -> 
     DA01 = ec_gen_crdt:new(?EC_AWORSET, awsc10),

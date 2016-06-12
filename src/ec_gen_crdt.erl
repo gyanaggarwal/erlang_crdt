@@ -128,7 +128,7 @@ merge(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 -spec mutate(Ops :: term(), DL :: list(), DI :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term()) -> {ok, {#ec_dvv{}, #ec_dvv{}}} | {error, atom()}.
 mutate(Ops, 
        DL, 
-       #ec_dvv{module=Mod, type=Type, name=Name}=DI, 
+       #ec_dvv{module=Mod, type=Type, name=Name, di_num=DINum}=DI, 
        #ec_dvv{module=Mod, type=Type, name=Name}=State, 
        ServerId) ->
     Delta = Mod:delta_crdt(Ops, DL, State, ServerId),
@@ -138,7 +138,7 @@ mutate(Ops,
 		[]     ->
 		    State1 = update(Delta, State, ServerId, ?EC_DVV_DIRTY_STATE),
 		    DI1    = update(Delta, DI,    ServerId, ?EC_DVV_DIRTY_DELTA),
-		    {ok, DI1, State1};
+		    {ok, DI1#ec_dvv{di_num=DINum}, State1};
 		Reason ->
 		    {error, Reason}
 	    end;
@@ -155,9 +155,9 @@ query(Criteria, #ec_dvv{module=Mod}=State) ->
     Mod:query_crdt(Criteria, State).
 
 -spec reset(DVV :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
-reset(#ec_dvv{module=Mod}=DVV, ServerId) ->
+reset(#ec_dvv{module=Mod, di_num=DINum}=DVV, ServerId) ->
     DVV1 = Mod:reset_crdt(DVV, ServerId),
-    DVV1#ec_dvv{status=?EC_DVV_CLEAN_DELTA}.
+    DVV1#ec_dvv{status=?EC_DVV_CLEAN_DELTA, di_num=DINum+1}.
 			
 -spec mutated(DVV :: #ec_dvv{}) -> #ec_dvv{}.
 mutated(#ec_dvv{module=Mod}=DVV) ->      

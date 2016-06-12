@@ -115,6 +115,7 @@
 			    type                             :: atom(),
 			    name                             :: atom(),
 			    status=?EC_DVV_CLEAN_STATE       :: {atom(), atom()},
+			    di_num=1                         :: non_neg_integer(),
 			    dot_list=[]                      :: list(),
 			    annonymus_list=[]                :: list()}).
 

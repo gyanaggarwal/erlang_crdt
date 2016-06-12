@@ -73,7 +73,7 @@ handle_call({?EC_MSG_MUTATE, {Ops, DL}},
 			   state_dvv=StateDvv, 
 			   delta_dvv=DeltaDvv, 
 			   app_config=AppConfig}=State) ->
-    print_mutate(Ops, LastMsg),
+    print_mutate(Ops, DeltaDvv#ec_dvv.di_num, LastMsg),
     {Reply, State1} = case ec_gen_crdt:mutate(Ops, DL, DeltaDvv, StateDvv, ec_crdt_config:get_node_id(AppConfig)) of
 			  {ok, DeltaDvv1, StateDvv1} ->
 			      {ok, State#ec_crdt_state{state_dvv=StateDvv1, delta_dvv=DeltaDvv1}};
@@ -97,7 +97,7 @@ handle_call(_Msg,
             #ec_crdt_state{}=State) ->
     {reply, 
      {error, ?EC_INVALID_OPERATION}, 
-     State#ec_crdt_state{last_msg=_Msg}}.
+     State}.
 
 handle_cast({stop, Reason}, 
 	    #ec_crdt_state{}=State) ->
@@ -114,7 +114,7 @@ handle_cast({?EC_MSG_MERGE, {SenderNodeId, DeltaList}},
 	    #ec_crdt_state{last_msg=LastMsg, 
 			   status=?EC_ACTIVE, 
 			   state_dvv=StateDvv}=State) ->
-    print_merge(SenderNodeId, length(DeltaList), LastMsg),
+    print_merge(SenderNodeId, get_di_num_list(DeltaList), LastMsg),
     StateDvv1 = lists:foldl(fun(DeltaDvvx, StateDvvx) -> merge_fun(SenderNodeId, DeltaDvvx, StateDvvx) end, StateDvv, DeltaList),
     State1 = State#ec_crdt_state{state_dvv=StateDvv1},
     {noreply, 
@@ -137,7 +137,7 @@ handle_cast({?EC_MSG_CAUSAL_HISTORY, {SenderNodeId, #ec_dvv{}=CausalHistory}},
      get_timeout(State)};
 handle_cast(_Msg, 
 	    #ec_crdt_state{}=State) ->
-    {noreply, State#ec_crdt_state{last_msg=_Msg}}.
+    {noreply, State}.
 
 handle_info(timeout, 
 	    #ec_crdt_state{status=?EC_ACTIVE, 
@@ -184,20 +184,23 @@ merge_fun(SenderNodeId, DeltaDvv, StateDvv) ->
             StateDvv
     end.
 
-print_mutate(Msg, LastMsg) ->
+get_di_num_list(DIList) ->    
+    lists:map(fun(DVV) -> DVV#ec_dvv.di_num end, DIList).
+
+print_mutate(Msg, DINum, LastMsg) ->
     case LastMsg =:= ?EC_MSG_MUTATE of
 	true  ->
-	    io:fwrite("   mutate   ~p~n", [Msg]);
+	    io:fwrite("   mutate   ~p delta_interval=[~p]~n", [Msg, DINum]);
 	false ->
-	    io:fwrite("~n   mutate   ~p~n", [Msg])
+	    io:fwrite("~n   mutate   ~p delta_interval=[~p]~n", [Msg, DINum])
     end.
 
-print_merge(Msg, Len, LastMsg) ->
+print_merge(Msg, NumList, LastMsg) ->
     case LastMsg =:= ?EC_MSG_MERGE of
 	true  ->
-	    io:fwrite("   merge    ~p [~p]~n", [Msg, Len]);
+	    io:fwrite("   merge    ~p delta_interval=~p~n", [Msg, NumList]);
 	false ->
-	    io:fwrite("~n   merge    ~p [~p]~n", [Msg, Len])
+	    io:fwrite("~n   merge    ~p delta_interval=~p~n", [Msg, NumList])
     end.
 
 print(MsgTag) ->
