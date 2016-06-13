@@ -31,17 +31,19 @@ get_delta_interval(Q0, #ec_dvv{}=CH, ServerId) ->
 -spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{}, ServerId :: term(), Flag :: true | false, Acc :: list()) -> list().
 get_delta_interval(Q0, #ec_dvv{}=CH, ServerId, Flag, Acc) -> 
     case {queue:out(Q0), Flag} of
-	{{empty, _}, _}            ->
+	{{empty, _}, _}                                                             ->
 	    lists:reverse(Acc);
-	{{{value, DI}, Q1}, true}  ->
+	{{{value, #ec_dvv{dot_list=[#ec_dot{replica_id=ServerId}]}=DI}, Q1}, true}  ->
 	    get_delta_interval(Q1, CH, ServerId, Flag, [DI | Acc]);
-	{{{value, DI}, Q1}, false} ->
+	{{{value, #ec_dvv{dot_list=[#ec_dot{replica_id=ServerId}]}=DI}, Q1}, false} ->
 	    case ec_gen_crdt:causal_consistent(DI, CH, ServerId, ?EC_GLOBAL) of
 		[] ->
 		    get_delta_interval(Q1, CH, ServerId, true, [DI | Acc]);
 		_  ->
 		    get_delta_interval(Q1, CH, ServerId, Flag, Acc)
-            end
+            end;
+	{{{value, _}, Q1}, _}                                                       ->
+	    get_delta_interval(Q1, CH, ServerId, Flag, Acc)
     end.
  
 

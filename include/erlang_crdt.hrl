@@ -138,7 +138,8 @@
 			    last_msg                         :: atom(),
 			    app_config                       :: #ec_app_config{}}).
 
--record(ec_data_state,     {data=queue:new()                 :: queue:queue(),
+-record(ec_data_state,     {mutation_data=queue:new()        :: queue:queue(),
+			    delta_interval=queue:new()       :: queue:queue(),
 			    file_state_mutation              :: file:io_device(),
 			    file_delta_interval              :: file:io_device(),
 			    app_config                       :: #ec_app_config{}}).
