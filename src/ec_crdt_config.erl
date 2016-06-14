@@ -32,7 +32,7 @@
 
 -include("erlang_crdt.hrl").
 
--define(TIMEOUT_PERIOD,            {milli_seconds, 10000}).
+-define(TIMEOUT_PERIOD,            {milli_seconds, {10000, 20000}}).
 -define(DATA_MANAGER,              ec_data_manager_api).
 -define(DATA_DIR,                  "./").
 -define(FILE_STATE_MUTATION,       "_state.data").
@@ -59,7 +59,7 @@ get_env() ->
 get_node_id(#ec_app_config{node_id=NodeId}) ->
     NodeId.
 
--spec get_timeout_period(AppConfig :: #ec_app_config{}) -> non_neg_integer().
+-spec get_timeout_period(AppConfig :: #ec_app_config{}) -> {non_neg_integer(), non_neg_integer()}.
 get_timeout_period(#ec_app_config{timeout_period=TimeoutPeriod}) ->
     TimeoutPeriod.
 

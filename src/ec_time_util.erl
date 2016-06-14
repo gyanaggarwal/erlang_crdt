@@ -19,14 +19,19 @@
 -module(ec_time_util).
 
 -export([convert_to_milli_seconds/1,
+	 get_random/1,
 	 get_timeout/2,
 	 get_current_time/0]).
 
--spec convert_to_milli_seconds({seconds | milli_seconds, T :: non_neg_integer()}) -> non_neg_integer().
-convert_to_milli_seconds({seconds, T}) -> 
-    T*1000;
-convert_to_milli_seconds({milli_seconds, T}) ->
-    T.
+-spec convert_to_milli_seconds({seconds | milli_seconds, {Min :: non_neg_integer(), Max :: non_neg_integer()}}) -> {non_neg_integer(), non_neg_integer()}.
+convert_to_milli_seconds({seconds, {Min, Max}}) -> 
+    {Min*1000, Max*1000};
+convert_to_milli_seconds({milli_seconds, {Min, Max}}) ->
+    {Min, Max}.
+
+-spec get_random({Min :: non_neg_integer(), Max :: non_neg_integer()}) -> non_neg_integer().
+get_random({Min, Max}) ->
+    random:uniform(Max-Min)+Min.
 
 -spec get_timeout(StartTime :: non_neg_integer(), TimeoutPeriod :: non_neg_integer()) -> non_neg_integer().
 get_timeout(StartTime, TimeoutPeriod) ->

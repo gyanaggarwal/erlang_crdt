@@ -20,6 +20,8 @@
 
 -include("erlang_crdt.hrl").
 
+-callback write_delta_mutation(DM :: #ec_dvv{}) -> ok.
+
 -callback write_delta_interval(DI :: #ec_dvv{}) -> ok.
 
 -callback read_delta_interval(CH :: #ec_dvv{}, ServerId :: term()) -> list().

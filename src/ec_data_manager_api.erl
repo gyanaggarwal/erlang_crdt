@@ -20,10 +20,15 @@
 
 -behavior(ec_data_manager).
 
--export([write_delta_interval/1,
+-export([write_delta_mutation/1,
+	 write_delta_interval/1,
 	 read_delta_interval/2]).
 
 -include("erlang_crdt.hrl").
+
+-spec write_delta_mutation(DM :: #ec_dvv{}) -> ok.
+write_delta_mutation(#ec_dvv{}=DM) ->    
+    gen_server:call(?EC_DATA_SERVER, {?EC_MSG_WRITE_DM, DM}).
 
 -spec write_delta_interval(DI :: #ec_dvv{}) -> ok.
 write_delta_interval(#ec_dvv{}=DI) ->

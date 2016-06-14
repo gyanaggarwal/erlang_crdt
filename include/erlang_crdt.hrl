@@ -103,6 +103,7 @@
 -define(EC_MSG_STOP,                  msg_stop).
 -define(EC_MSG_RESUME,                msg_resume).
 
+-define(EC_MSG_WRITE_DM,              msg_write_dm).
 -define(EC_MSG_WRITE_DI,              msg_write_di).
 -define(EC_MSG_READ_DI,               msg_read_di).
 
@@ -120,7 +121,7 @@
 			    annonymus_list=[]                :: list()}).
 
 -record(ec_app_config,     {node_id                          :: atom(),
-			    timeout_period=0                 :: non_neg_integer(),
+			    timeout_period={0, 0}            :: {non_neg_integer(), non_neg_integer()},
 			    data_manager                     :: atom(),
 			    data_dir                         :: string(),
 			    file_state_mutation              :: string(),
@@ -132,13 +133,15 @@
 
 -record(ec_crdt_state,     {status=?EC_INACTIVE              :: ?EC_INACTIVE | ?EC_ACTIVE,
 			    replica_cluster                  :: list(),
+			    timeout_period=0                 :: non_neg_integer(),
 			    timeout_start                    :: non_neg_integer(),
 			    state_dvv                        :: #ec_dvv{},
 			    delta_dvv                        :: #ec_dvv{},
+			    delta_interval                   :: #ec_dvv{},
 			    last_msg                         :: atom(),
 			    app_config                       :: #ec_app_config{}}).
 
--record(ec_data_state,     {mutation_data=queue:new()        :: queue:queue(),
+-record(ec_data_state,     {delta_mutation=queue:new()       :: queue:queue(),
 			    delta_interval=queue:new()       :: queue:queue(),
 			    file_state_mutation              :: file:io_device(),
 			    file_delta_interval              :: file:io_device(),

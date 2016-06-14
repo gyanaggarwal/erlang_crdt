@@ -38,6 +38,10 @@ init([AppConfig]) ->
     State = #ec_data_state{app_config=AppConfig},
     {ok, State}.
 
+handle_call({?EC_MSG_WRITE_DM, #ec_dvv{}=DM},
+            _From,
+            #ec_data_state{delta_mutation=DMQ}=State) ->
+    {reply, ok, State#ec_data_state{delta_mutation=queue:in(DM, DMQ)}};
 handle_call({?EC_MSG_WRITE_DI, #ec_dvv{}=DI},
             _From, 
             #ec_data_state{delta_interval=DIQ}=State) ->

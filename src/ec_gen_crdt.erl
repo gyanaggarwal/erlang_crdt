@@ -64,7 +64,7 @@
 -export([new/2,
 	 merge/2,
 	 merge/3,
-	 mutate/5,
+	 mutate/6,
 	 mutated/1,
 	 query/1,
 	 query/2,
@@ -125,10 +125,16 @@ merge(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 	    {error, Reason}
     end.
 
--spec mutate(Ops :: term(), DL :: list(), DI :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term()) -> {ok, {#ec_dvv{}, #ec_dvv{}}} | {error, atom()}.
+-spec mutate(Ops :: term(), 
+	     DL :: list(),
+	     DI10 :: #ec_dvv{},
+	     DI20 :: #ec_dvv{}, 
+	     State :: #ec_dvv{}, 
+	     ServerId :: term()) -> {ok, {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}} | {error, atom()}.
 mutate(Ops, 
        DL, 
-       #ec_dvv{module=Mod, type=Type, name=Name, di_num=DINum}=DI, 
+       #ec_dvv{module=Mod, type=Type, name=Name}=DI10,
+       #ec_dvv{module=Mod, type=Type, name=Name, di_num=DINum}=DI20, 
        #ec_dvv{module=Mod, type=Type, name=Name}=State, 
        ServerId) ->
     Delta = Mod:delta_crdt(Ops, DL, State, ServerId),
@@ -137,8 +143,9 @@ mutate(Ops,
 	    case causal_consistent(Delta, State, ServerId, ?EC_LOCAL) of
 		[]     ->
 		    State1 = update(Delta, State, ServerId, ?EC_DVV_DIRTY_STATE),
-		    DI1    = update(Delta, DI,    ServerId, ?EC_DVV_DIRTY_DELTA),
-		    {ok, DI1#ec_dvv{di_num=DINum}, State1};
+		    DI11   = update(Delta, DI10,  ServerId, ?EC_DVV_DIRTY_DELTA),
+		    DI21   = update(Delta, DI20,  ServerId, ?EC_DVV_DIRTY_DELTA),
+		    {ok, {DI11, DI21#ec_dvv{di_num=DINum}, State1}};
 		Reason ->
 		    {error, Reason}
 	    end;
