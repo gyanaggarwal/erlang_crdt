@@ -47,7 +47,12 @@ new_crdt(Type, Name) ->
 
 -spec delta_crdt(Ops :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 delta_crdt(Ops, DL, #ec_dvv{module=?MODULE, type=Type}=State, ServerId) ->
-    ec_crdt_util:new_delta(new_value(Ops, Type), DL, State, ServerId).
+    case new_value(Ops, Type) of
+	error       ->
+	    ec_crdt_util:add_param(#ec_dvv{}, State);
+	{ok, Value} ->
+	    ec_crdt_util:new_delta(Value, DL, State, ServerId)
+    end.
 
 -spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: term()) -> #ec_dvv{}.
 reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, _Flag, _DataStatus) ->
@@ -201,18 +206,20 @@ disable_win(_Value1, _Value2, DefaultValue) ->
 -spec new_value(Ops :: term(), Type :: atom()) -> term().
 new_value({Tag, Value}, Type) ->
     case {Type, Tag} of
-	{?EC_MVREGISTER, ?EC_OPS_VAL} ->
+	{?EC_MVREGISTER, ?EC_OPS_VAL}                ->
+	    {ok, Value};
+	{?EC_EWFLAG, ?EC_OPS_VAL}                    ->
+	    {ok, Value};
+	{?EC_DWFLAG, ?EC_OPS_VAL}                    ->
 	    Value;
-	{?EC_EWFLAG, ?EC_OPS_VAL}     ->
-	    Value;
-	{?EC_DWFLAG, ?EC_OPS_VAL}     ->
-	    Value;
-	{?EC_GCOUNTER, ?EC_OPS_INC}     ->
-	    Value;
-	{?EC_PNCOUNTER, ?EC_OPS_INC}    ->
-	    {Value, 0};
-	{?EC_PNCOUNTER, ?EC_OPS_DEC}    ->
-	    {0, Value}
+	{?EC_GCOUNTER, ?EC_OPS_INC} when Value >= 0  ->
+	    {ok, Value};
+	{?EC_PNCOUNTER, ?EC_OPS_INC} when Value >= 0 ->
+	    {ok, {Value, 0}};
+	{?EC_PNCOUNTER, ?EC_OPS_DEC} when Value >= 0 ->
+	    {ok, {0, Value}};
+	{_, _}                                       ->
+	    error
     end.
 
 -spec enable(Value1 :: true | false, Value2 :: true | false) -> true | false.
