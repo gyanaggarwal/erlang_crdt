@@ -97,7 +97,7 @@ handle_call({?EC_MSG_QUERY, Criteria},
 			   state_dvv=StateDvv}=State) ->
     {reply, 
      ec_gen_crdt:query(Criteria, StateDvv), 
-     State#ec_crdt_state{last_msg=?EC_MSG_QUERY}, 
+     State, 
      get_timeout(State)};
 handle_call(_Msg,
             _From, 
@@ -134,7 +134,7 @@ handle_cast({?EC_MSG_CAUSAL_HISTORY, {SenderNodeId, #ec_dvv{}=CausalHistory}},
 	    #ec_crdt_state{status=?EC_ACTIVE, 
 			   app_config=AppConfig}=State) ->
     NodeId = ec_crdt_config:get_node_id(AppConfig),
-    LocalCausalHistory = ec_gen_crdt:causal_history(CausalHistory, NodeId),
+    LocalCausalHistory = ec_gen_crdt:causal_history(CausalHistory, NodeId, ?EC_CAUSAL_SERVER_ONLY),
     DataManager = ec_crdt_config:get_data_manager(AppConfig),
     case DataManager:read_delta_interval(LocalCausalHistory, NodeId) of
 	[]     ->
@@ -143,7 +143,7 @@ handle_cast({?EC_MSG_CAUSAL_HISTORY, {SenderNodeId, #ec_dvv{}=CausalHistory}},
 	    ec_crdt_peer_api:merge([SenderNodeId], NodeId, DIList)
      end,
     {noreply, 
-     State#ec_crdt_state{last_msg=?EC_MSG_CAUSAL_HISTORY}, 
+     State, 
      get_timeout(State)};
 handle_cast(_Msg, 
 	    #ec_crdt_state{}=State) ->
@@ -165,7 +165,7 @@ handle_info(timeout,
 			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, [MDeltaInterval]),
 			     ec_gen_crdt:reset(DeltaInterval, NodeId);
 			 false ->
-			     ec_crdt_peer_api:causal_history(ReplicaCluster, NodeId, ec_gen_crdt:causal_history(StateDvv, ?EC_UNDEFINED)),
+			     ec_crdt_peer_api:causal_history(ReplicaCluster, NodeId, ec_gen_crdt:causal_history(StateDvv, NodeId, ?EC_CAUSAL_EXCLUDE_SERVER)),
 			     DeltaInterval
 	             end,
     {noreply, 

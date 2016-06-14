@@ -91,6 +91,9 @@
 -define(EC_ACTIVE,                    active).
 -define(EC_INACTIVE,                  in_active).
 
+-define(EC_CAUSAL_SERVER_ONLY,        ec_causal_server_only).
+-define(EC_CAUSAL_EXCLUDE_SERVER,     ec_causal_exclude_server).
+
 -define(EC_CRDT_SERVER,               ec_crdt_server).
 -define(EC_DATA_SERVER,               ec_data_server).
 

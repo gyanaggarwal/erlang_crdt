@@ -30,7 +30,7 @@
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
          causal_consistent_crdt/5,
-	 causal_history_crdt/2,
+	 causal_history_crdt/3,
 	 change_status_crdt/2]).
 
 -include("erlang_crdt.hrl").
@@ -105,13 +105,13 @@ causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name, annonymus_l
     L1 = ec_crdt_util:causal_consistent(Delta, State, ServerId, List),
     maps:fold(fun(Key, #ec_dvv{module=Mod}=DVV, Acc) -> Mod:causal_consistent_crdt(DVV, find_dvv(Key, CState), ServerId, ?EC_GLOBAL, Acc) end, L1, CDelta).
 
--spec causal_history_crdt(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
-causal_history_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=State, ServerId) ->
-    case ec_crdt_util:causal_history(State, ServerId) of
+-spec causal_history_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_CAUSAL_SERVER_ONLY | ?EC_CAUSAL_EXCLUDE_SERVER) -> #ec_dvv{}.
+causal_history_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=State, ServerId, Flag) ->
+    case ec_crdt_util:causal_history(State, ServerId, Flag) of
 	?EC_UNDEFINED ->
 	    ?EC_UNDEFINED;
 	State1        ->
-	    CMap1 = maps:fold(fun(KX, DVVX, Map) -> causal_history_crdt_fun(KX, DVVX, ServerId, Map) end, maps:new(), CMap),
+	    CMap1 = maps:fold(fun(KX, DVVX, Map) -> causal_history_crdt_fun(KX, DVVX, ServerId, Flag, Map) end, maps:new(), CMap),
 	    State1#ec_dvv{annonymus_list=[CMap1]}
     end.
 
@@ -179,9 +179,13 @@ mutated_crdt_fun(K, DVV, Map) ->
 	    Map
     end.
 
--spec causal_history_crdt_fun(K :: term(), DVV :: #ec_dvv{}, ServerId :: term(), Map :: maps:map()) -> maps:map().
-causal_history_crdt_fun(K, DVV, ServerId, Map) ->    
-    case ec_gen_crdt:causal_history(DVV, ServerId) of
+-spec causal_history_crdt_fun(K :: term(), 
+			      DVV :: #ec_dvv{}, 
+			      ServerId :: term(), 
+			      Flag :: ?EC_CAUSAL_SERVER_ONLY | ?EC_CAUSAL_EXCLUDE_SERVER, 
+			      Map :: maps:map()) -> maps:map().
+causal_history_crdt_fun(K, DVV, ServerId, Flag, Map) ->    
+    case ec_gen_crdt:causal_history(DVV, ServerId, Flag) of
 	?EC_UNDEFINED ->
 	    Map;
 	DVV1          ->

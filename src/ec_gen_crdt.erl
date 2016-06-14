@@ -55,7 +55,8 @@
 			      State :: #ec_dvv{}) -> list().
 
 -callback causal_history_crdt(State :: #ec_dvv{},
-			      ServerId :: term()) -> #ec_dvv{}.
+			      ServerId :: term(),
+			      Flag :: ?EC_CAUSAL_SERVER_ONLY | ?EC_CAUSAL_EXCLUDE_SERVER) -> #ec_dvv{}.
 
 -callback change_status_crdt(State :: #ec_dvv{},
 			     Status :: term()) -> #ec_dvv{}.
@@ -72,7 +73,7 @@
 	 causal_context/2,
 	 reset/2,
 	 causal_consistent/4,
-	 causal_history/2,
+	 causal_history/3,
 	 change_status/2]).
 
 -spec new(Type :: atom(), Name :: term()) -> #ec_dvv{}.
@@ -84,9 +85,9 @@ new(Type, Name) ->
 causal_context(Ops, #ec_dvv{module=Mod}=State) ->
     Mod:causal_context_crdt(Ops, State).
 
--spec causal_history(State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
-causal_history(#ec_dvv{module=Mod}=State, ServerId) ->
-    Mod:causal_history_crdt(State, ServerId).
+-spec causal_history(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_CAUSAL_SERVER_ONLY | ?EC_CAUSAL_EXCLUDE_SERVER) -> #ec_dvv{}.
+causal_history(#ec_dvv{module=Mod}=State, ServerId, Flag) ->
+    Mod:causal_history_crdt(State, ServerId, Flag).
 
 -spec change_status(DVV :: #ec_dvv{}, Status :: term()) -> #ec_dvv{}.
 change_status(#ec_dvv{module=Mod}=DVV, Status) ->

@@ -25,7 +25,7 @@
 	 delta_state_pair/1,
 	 causal_consistent/4,
 	 reset/3,
-	 causal_history/2]).
+	 causal_history/3]).
 
 -include("erlang_crdt.hrl").
 
@@ -83,11 +83,11 @@ causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 	    [Reason | List]
     end.
 
--spec causal_history(State :: #ec_dvv{}, ServerId :: term() | ?EC_UNDEFINED) -> #ec_dvv{}.
-causal_history(#ec_dvv{dot_list=DL}=State, ?EC_UNDEFINED) ->
-    NewDL = lists:foldl(fun(Dot, Acc) -> [ec_dvv:empty_dot(Dot) | Acc] end, [], DL),
+-spec causal_history(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_CAUSAL_SERVER_ONLY | ?EC_CAUSAL_EXCLUDE_SERVER) -> #ec_dvv{} | ?EC_UNDEFINED.
+causal_history(#ec_dvv{dot_list=DL}=State, ServerId, ?EC_CAUSAL_EXCLUDE_SERVER) ->
+    NewDL = lists:foldl(fun(Dot, Acc) -> exclude_causal_history_fun(Dot, ServerId, Acc) end, [], DL),
     State#ec_dvv{dot_list=ec_dvv:sort_dot_list(NewDL), annonymus_list=[]};
-causal_history(#ec_dvv{dot_list=DL}=State, ServerId) ->
+causal_history(#ec_dvv{dot_list=DL}=State, ServerId, ?EC_CAUSAL_SERVER_ONLY) ->
     case dot_list(DL, ServerId) of
 	[]    ->
 	    ?EC_UNDEFINED;
@@ -129,6 +129,13 @@ dot_list(DL, ServerId) ->
 	Dot   ->
             [Dot]
     end.
+
+-spec exclude_causal_history_fun(Dot :: #ec_dot{}, ServerId :: term(), Acc :: list()) -> list().
+exclude_causal_history_fun(#ec_dot{replica_id=ReplicaId}=Dot, ServerId, Acc) when ReplicaId =/= ServerId ->
+    [ec_dvv:empty_dot(Dot) | Acc];
+exclude_causal_history_fun(_, _, Acc) ->
+    Acc.
+
 
 
 
