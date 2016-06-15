@@ -26,6 +26,8 @@
 
 -callback read_delta_interval(CH :: #ec_dvv{}, ServerId :: term()) -> list().
 
+-callback read_data() -> {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}.
+
 
 
 

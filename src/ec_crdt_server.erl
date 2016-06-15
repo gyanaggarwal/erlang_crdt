@@ -36,10 +36,12 @@ start_link(AppConfig) ->
 
 init([AppConfig]) ->
     random:seed(erlang:phash2([node()]), erlang:monotonic_time(), erlang:unique_integer()),
+    DataManager = ec_crdt_config:get_data_manager(AppConfig),
+    {DV0, DI0, DS0} = DataManager:read_data(),
     State = #ec_crdt_state{timeout_period = ec_time_util:get_random(ec_crdt_config:get_timeout_period(AppConfig)),
-			   state_dvv      = ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),
-			   delta_dvv      = ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),
-			   delta_interval = ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),
+			   state_dvv      = DS0, %ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),
+			   delta_dvv      = DV0, %ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),
+			   delta_interval = DI0, %ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),
 			   app_config     = AppConfig},
     {ok, State}.
 

@@ -109,6 +109,7 @@
 -define(EC_MSG_WRITE_DM,              msg_write_dm).
 -define(EC_MSG_WRITE_DI,              msg_write_di).
 -define(EC_MSG_READ_DI,               msg_read_di).
+-define(EC_MSG_READ_DATA,             msg_read_data).
 
 -record(ec_dot,            {replica_id=?EC_UNDEFINED         :: term() | ?EC_UNDEFINED,
 			    counter_max=0                    :: non_neg_integer(),

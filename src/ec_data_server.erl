@@ -38,6 +38,13 @@ init([AppConfig]) ->
     State = #ec_data_state{app_config=AppConfig},
     {ok, State}.
 
+handle_call(?EC_MSG_READ_DATA,
+	    _From,
+	    #ec_data_state{}=State) ->
+    Data = {ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED), 
+	    ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED), 
+	    ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED)},
+    {reply, Data, State};
 handle_call({?EC_MSG_WRITE_DM, #ec_dvv{}=DM},
             _From,
             #ec_data_state{delta_mutation=DMQ}=State) ->
