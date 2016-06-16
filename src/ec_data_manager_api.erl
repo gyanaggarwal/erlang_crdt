@@ -35,8 +35,8 @@ write_delta_mutation(#ec_dvv{}=DM) ->
 write_delta_interval(#ec_dvv{}=DI) ->
     gen_server:call(?EC_DATA_SERVER, {?EC_MSG_WRITE_DI, DI}).
 
--spec read_delta_interval(CH :: #ec_dvv{}, ServerId :: term()) -> list().
-read_delta_interval(#ec_dvv{}=CH, ServerId) ->
+-spec read_delta_interval(CH :: #ec_dvv{} | ?EC_UNDEFINED, ServerId :: term()) -> list().
+read_delta_interval(CH, ServerId) ->
     gen_server:call(?EC_DATA_SERVER, {?EC_MSG_READ_DI, {CH, ServerId}}).
 
 -spec read_data() -> {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}.

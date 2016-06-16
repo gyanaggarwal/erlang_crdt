@@ -39,9 +39,9 @@ init([AppConfig]) ->
     DataManager = ec_crdt_config:get_data_manager(AppConfig),
     {DV0, DI0, DS0} = DataManager:read_data(),
     State = #ec_crdt_state{timeout_period = ec_time_util:get_random(ec_crdt_config:get_timeout_period(AppConfig)),
-			   state_dvv      = DS0, %ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),
-			   delta_dvv      = DV0, %ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),
-			   delta_interval = DI0, %ec_gen_crdt:new(?EC_COMPMAP, ?EC_UNDEFINED),
+			   state_dvv      = DS0, 
+			   delta_dvv      = DV0, 
+			   delta_interval = DI0, 
 			   app_config     = AppConfig},
     {ok, State}.
 
@@ -132,7 +132,7 @@ handle_cast({?EC_MSG_MERGE, {SenderNodeId, DeltaList}},
     {noreply, 
      State1#ec_crdt_state{last_msg=?EC_MSG_MERGE}, 
      get_timeout(State1)};
-handle_cast({?EC_MSG_CAUSAL_HISTORY, {SenderNodeId, #ec_dvv{}=CausalHistory}},
+handle_cast({?EC_MSG_CAUSAL_HISTORY, {SenderNodeId, CausalHistory}},
 	    #ec_crdt_state{status=?EC_ACTIVE, 
 			   app_config=AppConfig}=State) ->
     NodeId = ec_crdt_config:get_node_id(AppConfig),

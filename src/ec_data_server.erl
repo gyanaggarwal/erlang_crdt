@@ -53,7 +53,7 @@ handle_call({?EC_MSG_WRITE_DI, #ec_dvv{}=DI},
             _From, 
             #ec_data_state{delta_interval=DIQ}=State) ->
     {reply, ok, State#ec_data_state{delta_interval=queue:in(DI, DIQ)}};
-handle_call({?EC_MSG_READ_DI, {#ec_dvv{}=CH, ServerId}},
+handle_call({?EC_MSG_READ_DI, {CH, ServerId}},
 	    _From,
 	    #ec_data_state{delta_interval=DIQ}=State) ->
     {reply, ec_data_util:get_delta_interval(DIQ, CH, ServerId), State}.

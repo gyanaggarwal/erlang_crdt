@@ -26,7 +26,7 @@
 merge(NodeList, NodeId, DeltaList) ->
     gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_MERGE, {NodeId, DeltaList}}).
 
-causal_history(NodeList, NodeId, #ec_dvv{}=CausalHistory) ->
+causal_history(NodeList, NodeId, CausalHistory) ->
     gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_CAUSAL_HISTORY, {NodeId, CausalHistory}}).
 
 

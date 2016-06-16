@@ -22,14 +22,14 @@
 
 -include("erlang_crdt.hrl").
 
--spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{}, ServerId :: term()) -> list().
-get_delta_interval(Q0, #ec_dvv{}=CH, ServerId) ->
+-spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{} | ?EC_UNDEFINED, ServerId :: term()) -> list().
+get_delta_interval(Q0, CH, ServerId) ->
     get_delta_interval(Q0, CH, ServerId, false, []).
 
 % private function
 
--spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{}, ServerId :: term(), Flag :: true | false, Acc :: list()) -> list().
-get_delta_interval(Q0, #ec_dvv{}=CH, ServerId, Flag, Acc) -> 
+-spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{} | ?EC_UNDEFINED, ServerId :: term(), Flag :: true | false, Acc :: list()) -> list().
+get_delta_interval(Q0, CH, ServerId, Flag, Acc) -> 
     case {queue:out(Q0), Flag} of
 	{{empty, _}, _}                                                             ->
 	    lists:reverse(Acc);

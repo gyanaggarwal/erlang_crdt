@@ -86,6 +86,10 @@ causal_context(Ops, #ec_dvv{module=Mod}=State) ->
     Mod:causal_context_crdt(Ops, State).
 
 -spec causal_history(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_CAUSAL_SERVER_ONLY | ?EC_CAUSAL_EXCLUDE_SERVER) -> #ec_dvv{}.
+causal_history(?EC_UNDEFINED, _ServerId, _Flag) ->
+    ?EC_UNDEFINED;
+causal_history(#ec_dvv{dot_list=[]}, _ServerId, _Flag) ->
+    ?EC_UNDEFINED;
 causal_history(#ec_dvv{module=Mod}=State, ServerId, Flag) ->
     Mod:causal_history_crdt(State, ServerId, Flag).
 
@@ -94,6 +98,8 @@ change_status(#ec_dvv{module=Mod}=DVV, Status) ->
     Mod:change_status_crdt(DVV, Status).
 
 -spec causal_consistent(Delta ::#ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> list().
+causal_consistent(Delta, ?EC_UNDEFINED, ServerId, _Flag) ->
+    ec_crdt_util:causal_consistent(Delta, ?EC_UNDEFINED, ServerId, []);
 causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 		  #ec_dvv{module=Mod, type=Type, name=Name}=State,
 		  ServerId,

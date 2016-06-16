@@ -72,8 +72,8 @@ delta_state_pair({Delta, State}) ->
     end.
 
 -spec causal_consistent(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), List :: list()) -> list().
-causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
-		  #ec_dvv{module=Mod, type=Type, name=Name}=State,
+causal_consistent(Delta,
+		  State,
 		  ServerId,
 		  List) ->
     case ec_dvv:causal_consistent(Delta, State, ServerId) of

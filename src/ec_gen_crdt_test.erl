@@ -196,13 +196,13 @@ get_ormap01() ->
 get_node_list(List) ->
     L1 = lists:dropwhile(fun(X) -> X =/= $@ end, atom_to_list(node())),
     lists:map(fun(X) -> list_to_atom(atom_to_list(X) ++ L1) end, List).
-		      
+
+setup_replica() ->		      
+    erlang_crdt:setup_repl(get_node_list(?REPLICAS)),
+    timer:sleep(2000).
+
 mutate01() ->
     [N1, N2, N3] = get_node_list(?REPLICAS),
-    
-    erlang_crdt:setup_repl([N1, N2, N3]),
-
-    timer:sleep(2000),
     
     erlang_crdt:mutate(N1, {mutate, {{ec_aworset,   asc1}, {add, v11}}}),
     erlang_crdt:mutate(N2, {mutate, {{ec_aworset,   asc1}, {add, v11}}}),
