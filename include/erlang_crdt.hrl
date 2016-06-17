@@ -69,9 +69,6 @@
 
 -define(EC_INVALID_OPERATION,         invalid_operation).
 
--define(EC_INCORRECT_DELTA_INTERVAL,  incorrect_delta_interval).
--define(EC_EMPTY_DELTA_INTERVAL,      empty_delta_interval).
-
 -define(EC_LOCAL,                     ec_local).
 -define(EC_GLOBAL,                    ec_global).
 
@@ -88,6 +85,7 @@
 -define(EC_DVV_DIRTY_DELTA,           {?EC_DVV_DIRTY, ?EC_DVV_DELTA}).
 
 -define(EC_UNDEFINED,                 undefined).
+-define(EC_NOT_SPECIFIED,             not_specified).
 -define(EC_ACTIVE,                    active).
 -define(EC_INACTIVE,                  in_active).
 
@@ -102,7 +100,6 @@
 -define(EC_MSG_QUERY,                 msg_query).
 -define(EC_MSG_CAUSAL_CONTEXT,        msg_causal_context).
 -define(EC_MSG_MERGE,                 msg_merge).
--define(EC_MSG_CAUSAL_HISTORY,        msg_causal_history).
 -define(EC_MSG_STOP,                  msg_stop).
 -define(EC_MSG_RESUME,                msg_resume).
 

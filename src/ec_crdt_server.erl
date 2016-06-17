@@ -120,33 +120,36 @@ handle_cast({?EC_MSG_SETUP_REPL, NodeList},
 			 timeout_start=ec_time_util:get_current_time(), 
 			 replica_cluster=lists:delete(ec_crdt_config:get_node_id(AppConfig), NodeList)}, 
      TimeoutPeriod};
-handle_cast({?EC_MSG_MERGE, {SenderNodeId, DeltaList}},
+handle_cast({?EC_MSG_MERGE, {SenderNodeId, DeltaList, CausalHistory}},
 	    #ec_crdt_state{last_msg=LastMsg, 
 			   status=?EC_ACTIVE, 
 			   state_dvv=StateDvv,
 			   app_config=AppConfig}=State) ->
-    print_merge(SenderNodeId, get_di_num_list(DeltaList), LastMsg),
-    DataManager = ec_crdt_config:get_data_manager(AppConfig),
-    StateDvv1 = lists:foldl(fun(DeltaDvvx, StateDvvx) -> merge_fun(SenderNodeId, DeltaDvvx, StateDvvx, DataManager) end, StateDvv, DeltaList),
-    State1 = State#ec_crdt_state{state_dvv=StateDvv1},
-    {noreply, 
-     State1#ec_crdt_state{last_msg=?EC_MSG_MERGE}, 
-     get_timeout(State1)};
-handle_cast({?EC_MSG_CAUSAL_HISTORY, {SenderNodeId, CausalHistory}},
-	    #ec_crdt_state{status=?EC_ACTIVE, 
-			   app_config=AppConfig}=State) ->
     NodeId = ec_crdt_config:get_node_id(AppConfig),
-    LocalCausalHistory = ec_gen_crdt:causal_history(CausalHistory, NodeId, ?EC_CAUSAL_SERVER_ONLY),
     DataManager = ec_crdt_config:get_data_manager(AppConfig),
-    case DataManager:read_delta_interval(LocalCausalHistory, NodeId) of
-	[]     ->
+    State1 = case DeltaList of
+		 ?EC_NOT_SPECIFIED ->
+		     State;
+		 _                 ->
+		     print_merge(SenderNodeId, get_di_num_list(DeltaList), LastMsg),
+		     StateDvv1 = lists:foldl(fun(DeltaDvvx, StateDvvx) -> merge_fun(SenderNodeId, DeltaDvvx, StateDvvx, DataManager) end, StateDvv, DeltaList),
+		     State#ec_crdt_state{state_dvv=StateDvv1, last_msg=?EC_MSG_MERGE}
+             end,
+    case CausalHistory of
+	?EC_NOT_SPECIFIED ->
 	    ok;
-	DIList ->
-	    ec_crdt_peer_api:merge([SenderNodeId], NodeId, DIList)
-     end,
+	_                 ->
+	    LocalCausalHistory = ec_gen_crdt:causal_history(CausalHistory, NodeId, ?EC_CAUSAL_SERVER_ONLY),
+	    case DataManager:read_delta_interval(LocalCausalHistory, NodeId) of
+		[]     ->
+		    ok;
+		MissingDIList ->
+		    ec_crdt_peer_api:merge([SenderNodeId], NodeId, MissingDIList, ?EC_NOT_SPECIFIED)
+	    end
+    end,
     {noreply, 
-     State, 
-     get_timeout(State)};
+     State1, 
+     get_timeout(State1)};
 handle_cast(_Msg, 
 	    #ec_crdt_state{}=State) ->
     {noreply, State}.
@@ -159,15 +162,16 @@ handle_info(timeout,
 			   delta_interval=DeltaInterval, 
 			   app_config=AppConfig}=State) ->
     NodeId = ec_crdt_config:get_node_id(AppConfig),
+    DataManager = ec_crdt_config:get_data_manager(AppConfig),
+    CausalHistory = ec_gen_crdt:causal_history(StateDvv, NodeId, ?EC_CAUSAL_EXCLUDE_SERVER),
     DeltaInterval1 = case ec_crdt_util:is_dirty(DeltaInterval) of
 			 true  ->
 			     MDeltaInterval = ec_gen_crdt:mutated(DeltaInterval),
-			     DataManager = ec_crdt_config:get_data_manager(AppConfig),
 			     DataManager:write_delta_interval(MDeltaInterval),
-			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, [MDeltaInterval]),
+			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, [MDeltaInterval], CausalHistory),
 			     ec_gen_crdt:reset(DeltaInterval, NodeId);
 			 false ->
-			     ec_crdt_peer_api:causal_history(ReplicaCluster, NodeId, ec_gen_crdt:causal_history(StateDvv, NodeId, ?EC_CAUSAL_EXCLUDE_SERVER)),
+			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, ?EC_NOT_SPECIFIED, CausalHistory),
 			     DeltaInterval
 	             end,
     {noreply, 
@@ -190,7 +194,7 @@ get_timeout(#ec_crdt_state{timeout_start=TimeoutStart, timeout_period=TimeoutPer
     ec_time_util:get_timeout(TimeoutStart, TimeoutPeriod).
 
 merge_fun(SenderNodeId, DeltaInterval, StateDvv, DataManager) ->
-    case ec_gen_crdt:merge(DeltaInterval, StateDvv, SenderNodeId) of
+    case ec_gen_crdt:merge(DeltaInterval, StateDvv, SenderNodeId, ?EC_DVV_DIRTY_STATE) of
 	{ok, StateDvv1} ->
 	    DataManager:write_delta_mutation(DeltaInterval),
 	    StateDvv1;

@@ -58,10 +58,10 @@ reconcile_crdt(#ec_dvv{module=?MODULE, dot_list=DL1, annonymus_list=[CMap1]}=Sta
 	false ->
 	    State
     end;
-reconcile_crdt(#ec_dvv{module=?MODULE, annonymus_list=AL}=State, ServerId, ?EC_GLOBAL, _DataStatus) ->
+reconcile_crdt(#ec_dvv{module=?MODULE, annonymus_list=AL}=State, ServerId, ?EC_GLOBAL, DataStatus) ->
     case AL of
 	[CMap1, CMap2] ->
-	    CMap3 = maps:fold(fun(K, V, Acc) -> merge_map_fun(K, V, Acc, ServerId) end, CMap2, CMap1),
+	    CMap3 = maps:fold(fun(K, V, Acc) -> merge_map_fun(K, V, Acc, ServerId, DataStatus) end, CMap2, CMap1),
 	    State#ec_dvv{annonymus_list=[CMap3]};
 	_              ->
 	    State
@@ -145,13 +145,13 @@ causal_context_crdt({_, {{Type, Name}, Ops}}, #ec_dvv{module=?MODULE, annonymus_
 new_annonymus_value() ->
     maps:new().
 
--spec merge_map_fun({Type1 :: atom(), Name1 :: term()}, DVV1 :: #ec_dvv{}, CMap2 :: maps:map(), ServerId :: term()) -> maps:map().
-merge_map_fun({Type1, Name1}, #ec_dvv{module=Mod, type=Type1, name=Name1}=DVV1, CMap2, ServerId) ->
+-spec merge_map_fun({Type1 :: atom(), Name1 :: term()}, DVV1 :: #ec_dvv{}, CMap2 :: maps:map(), ServerId :: term(), DataStatus :: term()) -> maps:map().
+merge_map_fun({Type1, Name1}, #ec_dvv{module=Mod, type=Type1, name=Name1}=DVV1, CMap2, ServerId, DataStatus) ->
     {ok, DVV4} = case maps:find({Type1, Name1}, CMap2) of
 		     error ->
 			 {ok, DVV1};
 		     {ok, #ec_dvv{module=Mod, type=Type1, name=Name1}=DVV2} ->
-			 case ec_gen_crdt:merge(DVV1, DVV2, ServerId) of
+			 case ec_gen_crdt:merge(DVV1, DVV2, ServerId, DataStatus) of
 			     {error, _} ->
 				 {ok, DVV1};
 			     {ok, DVV3} ->

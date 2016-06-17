@@ -18,16 +18,13 @@
 
 -module(ec_crdt_peer_api).
 
--export([merge/3, 
-	 causal_history/3]).
+-export([merge/4]). 
 
 -include("erlang_crdt.hrl").
 
-merge(NodeList, NodeId, DeltaList) ->
-    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_MERGE, {NodeId, DeltaList}}).
+merge(NodeList, NodeId, DeltaList, CausalHistory) ->
+    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_MERGE, {NodeId, DeltaList, CausalHistory}}).
 
-causal_history(NodeList, NodeId, CausalHistory) ->
-    gen_server:abcast(NodeList, ?EC_CRDT_SERVER, {?EC_MSG_CAUSAL_HISTORY, {NodeId, CausalHistory}}).
 
 
 
