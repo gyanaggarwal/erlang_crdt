@@ -67,7 +67,7 @@ reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[
 
     DL9 = ec_dvv:replace_dot_list(DL1, ec_dvv:empty_dot(Dot1)),
     State#ec_dvv{dot_list=DL9, annonymus_list=[AD9]};
-reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_GLOBAL) ->		     
+reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_GLOBAL) ->
     D3 = reconcile(Type, ?EC_GLOBAL, D1, D2),
     State#ec_dvv{annonymus_list=[D3]};
 reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, ?EC_GLOBAL) ->

@@ -222,7 +222,7 @@ get_node_list(List) ->
 
 setup_replica() ->		      
     erlang_crdt:setup_repl(get_node_list(?REPLICAS)),
-    timer:sleep(2000).
+    timer:sleep(1000).
 
 mutate01() ->
     [N1, N2, N3] = get_node_list(?REPLICAS),
@@ -276,6 +276,11 @@ mutate05() ->
     
     erlang_crdt:mutate(N1, {mutate, {{ec_gcounter,  gcn4}, {inc, 30}}}),
     erlang_crdt:mutate(N1, {mutate, {{ec_gcounter,  gcn2}, {inc, 60}}}).
+
+    
+
+    
+
 
 
 

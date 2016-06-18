@@ -57,14 +57,11 @@ reconcile_crdt(#ec_dvv{module=?MODULE, dot_list=DL1, annonymus_list=[CMap1]}=Sta
 	false ->
 	    State
     end;
-reconcile_crdt(#ec_dvv{module=?MODULE, annonymus_list=AL}=State, ServerId, ?EC_GLOBAL) ->
-    case AL of
-	[CMap1, CMap2] ->
-	    CMap3 = maps:fold(fun(K, V, Acc) -> merge_map_fun(K, V, Acc, ServerId) end, CMap2, CMap1),
-	    State#ec_dvv{annonymus_list=[CMap3]};
-	_              ->
-	    State
-    end.
+reconcile_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap1, CMap2]}=State, ServerId, ?EC_GLOBAL) ->
+    CMap3 = maps:fold(fun(K, V, Acc) -> merge_map_fun(K, V, Acc, ServerId) end, CMap2, CMap1),
+    State#ec_dvv{annonymus_list=[CMap3]};
+reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, ?EC_GLOBAL) ->
+    State.
 
 -spec update_fun_crdt(Args :: list()) -> {fun(), fun()}.
 update_fun_crdt([_Type]) ->     

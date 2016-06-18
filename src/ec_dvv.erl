@@ -228,6 +228,10 @@ merge(#ec_dot{replica_id=Id, counter_max=Max1, counter_min=Min1, values=V1}=Dot1
     end.
 
 -spec compare_causality(DL1 :: list(), DL2 :: list(), Flag :: ?EC_EQUAL | ?EC_LESS | ?EC_MORE | ?EC_CONCURRENT) -> ?EC_EQUAL | ?EC_LESS | ?EC_MORE | ?EC_CONCURRENT.
+compare_causality([#ec_dot{replica_id=Id, counter_max=Max1, counter_min=Min1}], 
+		  [#ec_dot{replica_id=Id, counter_max=Max2, counter_min=Min2}], 
+		  ?EC_EQUAL) when (Min1 =:= Max2+1) orelse (Min2 =:= Max1+1) ->
+    ?EC_CONCURRENT;
 compare_causality([#ec_dot{replica_id=Id, counter_max=C1} | T1], [#ec_dot{replica_id=Id, counter_max=C2} | T2], Flag) ->
     case C1 =:= C2 of
 	true  ->

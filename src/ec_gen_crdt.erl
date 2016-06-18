@@ -127,8 +127,8 @@ mutate(Ops,
 	    case causal_consistent(Delta, DV0, ServerId, ?EC_LOCAL) of
 		[]     ->
 		    DM1 = update(Delta, DM0, ServerId),
-		    DI1 = update(Delta, DI0, ServerId),
-                    DV1 = update(Delta, DV0, ServerId),
+                    {ok, DI1} = merge(mutated(DM1), DI0, ServerId),
+                    {ok, DV1} = merge(mutated(DM1), DV0, ServerId),
 		    {ok, {DM1, DI1#ec_dvv{di_num=DINum}, DV1}};
 		Reason ->
 		    {error, Reason}
