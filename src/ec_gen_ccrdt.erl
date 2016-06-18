@@ -22,7 +22,7 @@
 
 -export([new_crdt/2,
          delta_crdt/4,
-         reconcile_crdt/4,
+         reconcile_crdt/3,
          update_fun_crdt/1,
          merge_fun_crdt/1,
          query_crdt/2,
@@ -30,8 +30,7 @@
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
          causal_consistent_crdt/5,
-	 causal_history_crdt/3,
-	 change_status_crdt/2]).
+	 causal_history_crdt/3]).
 
 -include("erlang_crdt.hrl").
 
@@ -45,23 +44,23 @@ delta_crdt({?EC_OPS_MUTATE, {{Type, Name}, Ops}}, DL, #ec_dvv{module=?MODULE, an
     Value = Mod:delta_crdt(Ops, DL, DVV, ServerId),
     ec_crdt_util:new_delta(Value, ec_dvv:join(State), State, ServerId).
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: term()) -> #ec_dvv{}.
-reconcile_crdt(#ec_dvv{module=?MODULE, dot_list=DL1, annonymus_list=[CMap1]}=State, ServerId, ?EC_LOCAL, DataStatus) ->
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> #ec_dvv{}.
+reconcile_crdt(#ec_dvv{module=?MODULE, dot_list=DL1, annonymus_list=[CMap1]}=State, ServerId, ?EC_LOCAL) ->
     #ec_dot{replica_id=ServerId, values=[#ec_dvv{type=Type1, name=Name1}=DVV1]} = Dot1 = ec_dvv:find_dot(DL1, ServerId),
     case ec_crdt_util:is_dirty(DVV1) of
 	true  ->
 	    DVV3 = find_dvv({Type1, Name1}, CMap1),
-	    DVV4 = ec_gen_crdt:update(DVV1, DVV3, ServerId, DataStatus),
+	    DVV4 = ec_gen_crdt:update(DVV1, DVV3, ServerId),
 	    CMap2 = maps:put({Type1, Name1}, DVV4, CMap1),
 	    DL2 = ec_dvv:replace_dot_list(DL1, ec_dvv:empty_dot(Dot1)),
 	    State#ec_dvv{dot_list=DL2, annonymus_list=[CMap2]};
 	false ->
 	    State
     end;
-reconcile_crdt(#ec_dvv{module=?MODULE, annonymus_list=AL}=State, ServerId, ?EC_GLOBAL, DataStatus) ->
+reconcile_crdt(#ec_dvv{module=?MODULE, annonymus_list=AL}=State, ServerId, ?EC_GLOBAL) ->
     case AL of
 	[CMap1, CMap2] ->
-	    CMap3 = maps:fold(fun(K, V, Acc) -> merge_map_fun(K, V, Acc, ServerId, DataStatus) end, CMap2, CMap1),
+	    CMap3 = maps:fold(fun(K, V, Acc) -> merge_map_fun(K, V, Acc, ServerId) end, CMap2, CMap1),
 	    State#ec_dvv{annonymus_list=[CMap3]};
 	_              ->
 	    State
@@ -115,12 +114,6 @@ causal_history_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=State, Server
 	    State1#ec_dvv{annonymus_list=[CMap1]}
     end.
 
--spec change_status_crdt(DVV :: #ec_dvv{}, Status :: term()) -> #ec_dvv{}.
-change_status_crdt(#ec_dvv{module=?MODULE, annonymus_list=[CMap]}=DVV, Status) ->    
-    DVV1 = DVV#ec_dvv{status=Status},
-    CMap1 = maps:fold(fun(KX, DVVX, Map) -> change_status_crdt_fun(KX, DVVX, Status, Map) end, maps:new(), CMap),
-    DVV1#ec_dvv{annonymus_list=[CMap1]}.
-
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> {error, ?EC_INVALID_OPERATION} | term().
 query_crdt([{Type, Name} | TCriteria], #ec_dvv{module=?MODULE, annonymus_list=[CMap]}) ->
     case maps:find({Type, Name}, CMap) of
@@ -145,13 +138,13 @@ causal_context_crdt({_, {{Type, Name}, Ops}}, #ec_dvv{module=?MODULE, annonymus_
 new_annonymus_value() ->
     maps:new().
 
--spec merge_map_fun({Type1 :: atom(), Name1 :: term()}, DVV1 :: #ec_dvv{}, CMap2 :: maps:map(), ServerId :: term(), DataStatus :: term()) -> maps:map().
-merge_map_fun({Type1, Name1}, #ec_dvv{module=Mod, type=Type1, name=Name1}=DVV1, CMap2, ServerId, DataStatus) ->
+-spec merge_map_fun({Type1 :: atom(), Name1 :: term()}, DVV1 :: #ec_dvv{}, CMap2 :: maps:map(), ServerId :: term()) -> maps:map().
+merge_map_fun({Type1, Name1}, #ec_dvv{module=Mod, type=Type1, name=Name1}=DVV1, CMap2, ServerId) ->
     {ok, DVV4} = case maps:find({Type1, Name1}, CMap2) of
 		     error ->
 			 {ok, DVV1};
 		     {ok, #ec_dvv{module=Mod, type=Type1, name=Name1}=DVV2} ->
-			 case ec_gen_crdt:merge(DVV1, DVV2, ServerId, DataStatus) of
+			 case ec_gen_crdt:merge(DVV1, DVV2, ServerId) of
 			     {error, _} ->
 				 {ok, DVV1};
 			     {ok, DVV3} ->
@@ -192,8 +185,5 @@ causal_history_crdt_fun(K, DVV, ServerId, Flag, Map) ->
 	    maps:put(K, DVV1, Map)
     end.
 
--spec change_status_crdt_fun(K :: term(), DVV :: #ec_dvv{}, Status :: term(), Map :: maps:map()) -> maps:map().
-change_status_crdt_fun(K, DVV, Status, Map) ->     
-    DVV1 = ec_gen_crdt:change_status(DVV, Status),
-    maps:put(K, DVV1, Map).
+
 

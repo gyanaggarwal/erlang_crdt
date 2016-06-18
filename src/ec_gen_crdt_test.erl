@@ -32,7 +32,7 @@ mutate([Ops | T], DM0, DI0, DV0, ServerId) ->
 	{error, _} ->
 	    mutate(T, DM0, DI0, DV0, ServerId);
 	{ok, {DM1, DI1, DV1}} ->
-	    mutate(T, DM1, DI1, DV1, ServerId)
+	    mutate(T, ec_gen_crdt:reset(DM1, ServerId), DI1, DV1, ServerId)
     end;
 mutate([], DM, DI, DV, _) ->
     {DM, DI, DV}.
@@ -143,6 +143,29 @@ data_compmap03() ->
            {mutate, {{?EC_PNCOUNTER,  pnc3}, {inc, 5}}}],
     {?EC_COMPMAP, ?EC_UNDEFINED, L11, L13, L15, L25}.
 
+data_compmap04() ->
+    L11 = [{mutate, {{?EC_AWORSET,  pnc1}, {add, pnc1111}}},
+           {mutate, {{?EC_AWORSET,  pnc1}, {add, pnc1112}}},
+           {mutate, {{?EC_AWORSET,  pnc2}, {add, pnc2113}}},
+           {mutate, {{?EC_AWORSET,  pnc2}, {add, pnc2114}}},
+           {mutate, {{?EC_AWORSET,  pnc3}, {add, pnc3115}}}],
+    L13 = [{mutate, {{?EC_AWORSET,  pnc1}, {add, pnc1121}}},
+           {mutate, {{?EC_AWORSET,  pnc1}, {add, pnc1122}}},
+           {mutate, {{?EC_AWORSET,  pnc2}, {add, pnc2123}}},
+           {mutate, {{?EC_AWORSET,  pnc3}, {add, pnc3124}}},
+	   {mutate, {{?EC_AWORSET,  pnc3}, {add, pnc3125}}}],
+    L15 = [{mutate, {{?EC_AWORSET,  pnc1}, {add, pnc1131}}},
+           {mutate, {{?EC_AWORSET,  pnc3}, {add, pnc3132}}},
+           {mutate, {{?EC_AWORSET,  pnc2}, {add, pnc2133}}},
+           {mutate, {{?EC_AWORSET,  pnc2}, {add, pnc2134}}},
+	   {mutate, {{?EC_AWORSET,  pnc3}, {add, pnc3135}}}],
+    L25 = [{mutate, {{?EC_AWORSET,  pnc1}, {add, pnc1211}}},
+           {mutate, {{?EC_AWORSET,  pnc1}, {add, pnc1212}}},
+           {mutate, {{?EC_AWORSET,  pnc2}, {add, pnc2213}}},
+           {mutate, {{?EC_AWORSET,  pnc2}, {add, pnc2214}}},
+	   {mutate, {{?EC_AWORSET,  pnc3}, {add, pnc3215}}}],
+    {?EC_COMPMAP, ?EC_UNDEFINED, L11, L13, L15, L25}.
+
 query_test0(Data) ->
     query_test0(Data, ?EC_UNDEFINED).
 
@@ -166,20 +189,20 @@ run_test0({Type, Name, L11, L13, L15, L25}) ->
     {_M22, DI22, DV22} = mutate(L25, DM21, DI21, DV21, s2),                        % DI22 is delta mutation for elements 1,2,3,4,5 
               
     % updating s2 with incremental delta interval from x1
-    {ok, DV23}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI12), DV22),             % updating server s2 with delta mutation DI12 from x1
-    {ok, DV24}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV23),             % updating server s2 with delta mutation DI13 from x1
-    {ok, DV25}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV24),             % updating server s2 with delta mutation DI14 from x1
+    {ok, DV23}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI12), DV22, x1),         % updating server s2 with delta mutation DI12 from x1
+    {ok, DV24}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV23, x1),         % updating server s2 with delta mutation DI13 from x1
+    {ok, DV25}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV24, x1),         % updating server s2 with delta mutation DI14 from x1
     
     % updating s2 with one consolidated delta interval from x1
-    {ok, DV26}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI16), DV22),             % updating server s2 with delta mutation DI16 from x1
+    {ok, DV26}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI16), DV22, x1),         % updating server s2 with delta mutation DI16 from x1
 
     % updating x1 with delta interval from s2
-    {ok, DV17}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI22), DV16),             % updating server x1 with delta mutation DI22 from s2
+    {ok, DV17}   = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI22), DV16, s2),         % updating server x1 with delta mutation DI22 from s2
 
     % checking global causality
-    R1           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV23),             % delta interval causally_ahead
-    R2           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV24),             % delta interval causally_behind
-    R3           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV25),             % delta interval causally_behind
+    R1           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI14), DV23, x1),         % delta interval causally_ahead
+    R2           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV24, x1),         % delta interval causally_behind
+    R3           = ec_gen_crdt:merge(ec_gen_crdt:mutated(DI13), DV25, x1),         % delta interval causally_behind
 
     [{DV25, DV26, DV17}, {R1, R2, R3}].
 

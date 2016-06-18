@@ -47,9 +47,6 @@
 -define(EC_MORE,                      ec_more).
 -define(EC_CONCURRENT,                ec_concurrent).
 
--define(EC_ADD_DVV,                   ec_add_dvv).
--define(EC_MERGE_DVV,                 ec_merge_dvv).
-
 -define(EC_RESET_NONE,                ec_reset_none).
 -define(EC_RESET_VALUES,              ec_reset_values).
 -define(EC_RESET_ANNONYMUS_LIST,      ec_reset_annonymus_list).
@@ -77,12 +74,6 @@
 
 -define(EC_DVV_CLEAN,                 dvv_clean).
 -define(EC_DVV_DIRTY,                 dvv_dirty).
--define(EC_DVV_STATE,                 dvv_state).
--define(EC_DVV_DELTA,                 dvv_delta).
--define(EC_DVV_CLEAN_STATE,           {?EC_DVV_CLEAN, ?EC_DVV_STATE}).
--define(EC_DVV_DIRTY_STATE,           {?EC_DVV_DIRTY, ?EC_DVV_STATE}).
--define(EC_DVV_CLEAN_DELTA,           {?EC_DVV_CLEAN, ?EC_DVV_DELTA}).
--define(EC_DVV_DIRTY_DELTA,           {?EC_DVV_DIRTY, ?EC_DVV_DELTA}).
 
 -define(EC_UNDEFINED,                 undefined).
 -define(EC_NOT_SPECIFIED,             not_specified).
@@ -116,7 +107,7 @@
 -record(ec_dvv,            {module                           :: atom(),
 			    type                             :: atom(),
 			    name                             :: atom(),
-			    status=?EC_DVV_CLEAN_STATE       :: {atom(), atom()},
+			    status=?EC_DVV_CLEAN             :: ?EC_DVV_CLEAN | ?EC_DVV_DIRTY,
 			    di_num=1                         :: non_neg_integer(),
 			    dot_list=[]                      :: list(),
 			    annonymus_list=[]                :: list()}).

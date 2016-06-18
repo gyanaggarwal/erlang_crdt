@@ -30,8 +30,7 @@
 
 -callback reconcile_crdt(State :: #ec_dvv{}, 
 			 ServerId :: term(), 
-			 Flag :: ?EC_LOCAL | ?EC_GLOBAL, 
-			 DataStatus :: term()) -> #ec_dvv{}.
+			 Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> #ec_dvv{}.
 
 -callback update_fun_crdt(Args :: list()) -> {fun(), fun()}.
 
@@ -58,22 +57,17 @@
 			      ServerId :: term(),
 			      Flag :: ?EC_CAUSAL_SERVER_ONLY | ?EC_CAUSAL_EXCLUDE_SERVER) -> #ec_dvv{}.
 
--callback change_status_crdt(State :: #ec_dvv{},
-			     Status :: term()) -> #ec_dvv{}.
-     
-
 -export([new/2,
-	 merge/4,
+	 merge/3,
 	 mutate/6,
 	 mutated/1,
 	 query/1,
 	 query/2,
-	 update/4,
+	 update/3,
 	 causal_context/2,
 	 reset/2,
 	 causal_consistent/4,
-	 causal_history/3,
-	 change_status/2]).
+	 causal_history/3]).
 
 -spec new(Type :: atom(), Name :: term()) -> #ec_dvv{}.
 new(Type, Name) ->
@@ -92,10 +86,6 @@ causal_history(#ec_dvv{dot_list=[]}, _ServerId, _Flag) ->
 causal_history(#ec_dvv{module=Mod}=State, ServerId, Flag) ->
     Mod:causal_history_crdt(State, ServerId, Flag).
 
--spec change_status(DVV :: #ec_dvv{}, Status :: term()) -> #ec_dvv{}.
-change_status(#ec_dvv{module=Mod}=DVV, Status) ->
-    Mod:change_status_crdt(DVV, Status).
-
 -spec causal_consistent(Delta ::#ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> list().
 causal_consistent(Delta, ?EC_UNDEFINED, ServerId, _Flag) ->
     ec_crdt_util:causal_consistent(Delta, ?EC_UNDEFINED, ServerId, []);
@@ -105,27 +95,25 @@ causal_consistent(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
 		  Flag) ->
     Mod:causal_consistent_crdt(Delta, State, ServerId, Flag, []).
 
--spec merge(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), DataStatus :: term()) -> {ok, #ec_dvv{}} | {error, term()}.
+-spec merge(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term()) -> {ok, #ec_dvv{}} | {error, term()}.
 merge(#ec_dvv{module=Mod, type=Type, name=Name}=Delta, 
       #ec_dvv{module=Mod, type=Type, name=Name}=State, 
-      ServerId,
-      DataStatus) ->
-    {Delta1, State1} = ec_crdt_util:delta_state_pair({Delta, State}),
-    case causal_consistent(Delta1, State1, ServerId, ?EC_GLOBAL) of
-	[]     ->
-	    State2 = ec_dvv:sync([Delta1, State1], Mod:merge_fun_crdt([Type])),
+      ServerId) ->
+    case delta_state(Delta, State, ServerId) of
+	{ok, {Delta1, State1}} ->
+	    State2 = ec_dvv:sync(Delta1, State1, Mod:merge_fun_crdt([Type])),
 	    State3 = ec_crdt_util:add_param(State2, State1),
-	    State4 = Mod:reconcile_crdt(State3, ServerId, ?EC_GLOBAL, DataStatus),
-	    {ok, change_status(ec_crdt_util:add_param(State4, State1), DataStatus)};
-	Reason ->
+	    State4 = Mod:reconcile_crdt(State3, ServerId, ?EC_GLOBAL),
+	    {ok, ec_crdt_util:add_param(State4#ec_dvv{status=?EC_DVV_DIRTY}, State1)};
+	{error, Reason}        ->
 	    {error, Reason}
     end.
 
 -spec mutate(Ops :: term(), 
 	     DL :: list(),
-	     DI10 :: #ec_dvv{},
-	     DI20 :: #ec_dvv{}, 
-	     State :: #ec_dvv{}, 
+	     DM0 :: #ec_dvv{},
+	     DI0 :: #ec_dvv{}, 
+	     DV0 :: #ec_dvv{}, 
 	     ServerId :: term()) -> {ok, {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}} | {error, atom()}.
 mutate(Ops, 
        DL, 
@@ -138,9 +126,9 @@ mutate(Ops,
 	true  ->
 	    case causal_consistent(Delta, DV0, ServerId, ?EC_LOCAL) of
 		[]     ->
-		    DM1 = update(Delta, DM0, ServerId, ?EC_DVV_DIRTY_DELTA),
-		    DI1 = update(Delta, DI0, ServerId, ?EC_DVV_DIRTY_DELTA),
-                    DV1 = update(Delta, DV0, ServerId, ?EC_DVV_DIRTY_STATE),
+		    DM1 = update(Delta, DM0, ServerId),
+		    DI1 = update(Delta, DI0, ServerId),
+                    DV1 = update(Delta, DV0, ServerId),
 		    {ok, {DM1, DI1#ec_dvv{di_num=DINum}, DV1}};
 		Reason ->
 		    {error, Reason}
@@ -160,22 +148,39 @@ query(Criteria, #ec_dvv{module=Mod}=State) ->
 -spec reset(DVV :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 reset(#ec_dvv{module=Mod, di_num=DINum}=DVV, ServerId) ->
     DVV1 = Mod:reset_crdt(DVV, ServerId),
-    DVV1#ec_dvv{status=?EC_DVV_CLEAN_DELTA, di_num=DINum+1}.
+    DVV1#ec_dvv{status=?EC_DVV_CLEAN, di_num=DINum+1}.
 			
 -spec mutated(DVV :: #ec_dvv{}) -> #ec_dvv{}.
 mutated(#ec_dvv{module=Mod}=DVV) ->      
     Mod:mutated_crdt(DVV).
 
--spec update(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), DataStatus :: term()) -> #ec_dvv{}.
+-spec update(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 update(#ec_dvv{module=Mod, type=Type, name=Name}=Delta, 
        #ec_dvv{module=Mod, type=Type, name=Name}=State, 
-       ServerId,
-       DataStatus) ->
+       ServerId) ->
     State1 = ec_dvv:update(Delta, State, Mod:update_fun_crdt([Type]), ServerId),
     State2 = ec_crdt_util:add_param(State1, State),
-    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_LOCAL, DataStatus),
-    ec_crdt_util:add_param(State3#ec_dvv{status=DataStatus}, State).
+    State3 = Mod:reconcile_crdt(State2, ServerId, ?EC_LOCAL),
+    ec_crdt_util:add_param(State3#ec_dvv{status=?EC_DVV_DIRTY}, State).
 
+% private function
 
+-spec delta_state(DVV1 :: #ec_dvv{}, DVV2 :: #ec_dvv{}, ServerId :: term()) -> {ok, {#ec_dvv{}, #ec_dvv{}}} | {error, list()}.
+delta_state(#ec_dvv{module=Mod, type=Type, name=Name}=DVV1, 
+	    #ec_dvv{module=Mod, type=Type, name=Name}=DVV2, 
+	    ServerId) ->
+    case causal_consistent(DVV1, DVV2, ServerId, ?EC_GLOBAL) of
+	[]                                    ->
+	    {ok, {DVV1, DVV2}};
+	[{?EC_CAUSALLY_BEHIND, _} | _]=Reason ->
+	    case causal_consistent(DVV2, DVV1, ServerId, ?EC_GLOBAL) of
+		[] ->
+		    {ok, {DVV2, DVV1}};
+		_  ->
+		    {error, Reason}
+            end;
+	Reason1                              ->
+	    {error, Reason1}
+    end.
 
     

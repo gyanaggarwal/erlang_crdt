@@ -22,7 +22,6 @@
 	 new_delta/4,
 	 find_module/1,
 	 is_dirty/1,
-	 delta_state_pair/1,
 	 causal_consistent/4,
 	 reset/3,
 	 causal_history/3]).
@@ -36,7 +35,7 @@ add_param(DVV, #ec_dvv{module=Mod, type=Type, name=Name}) ->
 -spec new_delta(Value :: term(), DL :: list(), State :: #ec_dvv{}, ServerId :: term()) -> #ec_dvv{}.
 new_delta(Value, DL, State, ServerId) ->
     NewDelta = ec_dvv:new(dot_list(DL, ServerId), Value),
-    add_param(NewDelta#ec_dvv{status=?EC_DVV_DIRTY_DELTA}, State).
+    add_param(NewDelta#ec_dvv{status=?EC_DVV_DIRTY}, State).
 
 -spec reset(DVV :: #ec_dvv{},
 	    ServerId :: term(),
@@ -57,19 +56,10 @@ find_module(Type) ->
     end.
 
 -spec is_dirty(DVV :: #ec_dvv{}) -> true | false.
-is_dirty(#ec_dvv{status={?EC_DVV_DIRTY, _}}) ->
+is_dirty(#ec_dvv{status=?EC_DVV_DIRTY}) ->
     true;
 is_dirty(#ec_dvv{}) ->
     false.
-
--spec delta_state_pair({Delta :: #ec_dvv{}, State :: #ec_dvv{}}) -> {#ec_dvv{}, #ec_dvv{}}.
-delta_state_pair({Delta, State}) ->
-    case is_state(State) of
-	true  ->
-	    {Delta, State};
-	false ->
-	    {State, Delta}
-    end.
 
 -spec causal_consistent(Delta :: #ec_dvv{}, State :: #ec_dvv{}, ServerId :: term(), List :: list()) -> list().
 causal_consistent(Delta,
@@ -114,12 +104,6 @@ reset_dot_list(DL, ?EC_RESET_NONE) ->
     lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max+1} | Acc] end, [], DL);
 reset_dot_list(DL, ?EC_RESET_VALUES) ->
     lists:foldl(fun(#ec_dot{counter_max=Max}=DotX, Acc) -> [DotX#ec_dot{counter_min=Max+1, values=[]} | Acc] end, [], DL).
-
--spec is_state(DVV :: #ec_dvv{}) -> true | false.
-is_state(#ec_dvv{status={_, ?EC_DVV_STATE}}) ->	
-    true;
-is_state(#ec_dvv{}) ->
-    false.
 
 -spec dot_list(DL :: list(), ServerId :: term()) -> list().
 dot_list(DL, ServerId) ->

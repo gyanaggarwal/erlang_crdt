@@ -194,7 +194,7 @@ get_timeout(#ec_crdt_state{timeout_start=TimeoutStart, timeout_period=TimeoutPer
     ec_time_util:get_timeout(TimeoutStart, TimeoutPeriod).
 
 merge_fun(SenderNodeId, DeltaInterval, StateDvv, DataManager) ->
-    case ec_gen_crdt:merge(DeltaInterval, StateDvv, SenderNodeId, ?EC_DVV_DIRTY_STATE) of
+    case ec_gen_crdt:merge(DeltaInterval, StateDvv, SenderNodeId) of
 	{ok, StateDvv1} ->
 	    DataManager:write_delta_mutation(DeltaInterval),
 	    StateDvv1;

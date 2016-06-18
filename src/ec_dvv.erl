@@ -20,7 +20,7 @@
 
 -export([new/1,
 	 new/2,
-         sync/2,
+         sync/3,
 	 update/2,
 	 update/3,
 	 update/4,
@@ -50,9 +50,10 @@ new(DL, V) when is_list(V) ->
 new(DL, V) ->
     new(DL, [V]).
 
--spec sync(Clocks :: list(), MergeFun :: {fun(), fun()}) -> #ec_dvv{}.
-sync(Clocks, MergeFun) ->
-    sync1(Clocks, MergeFun, ?EC_MERGE_DVV).
+-spec sync(Clock1 :: #ec_dvv{}, Clock2 :: #ec_dvv{}, MergeFun :: {fun(), fun()}) -> #ec_dvv{}.
+sync(Clock1, Clock2, MergeFun) ->
+    {Clock, _} = sync2(Clock1, {Clock2, MergeFun}),
+    Clock.
 
 -spec update(Clock :: #ec_dvv{}, Id :: term()) -> #ec_dvv{}.
 update(#ec_dvv{dot_list=DL, annonymus_list=[V]}, Id) ->
@@ -66,7 +67,7 @@ update(UClock, LClock, Id) ->
 update(UClock, ?EC_UNDEFINED, _UpdateFun, Id) ->
     update(UClock, Id);
 update(#ec_dvv{annonymus_list=[UV]}=UClock, LClock, UpdateFun, Id) ->
-    {#ec_dvv{dot_list=DL, annonymus_list=AL}, _, ?EC_MERGE_DVV} = sync2(UClock#ec_dvv{annonymus_list=[]}, {LClock, UpdateFun, ?EC_MERGE_DVV}),
+    {#ec_dvv{dot_list=DL, annonymus_list=AL}, _} = sync2(UClock#ec_dvv{annonymus_list=[]}, {LClock, UpdateFun}),
     #ec_dvv{dot_list=dot(DL, Id, UV, UpdateFun), annonymus_list=AL}.
 
 -spec values(Clock :: #ec_dvv{} | ?EC_UNDEFINED) -> list() | ?EC_UNDEFINED.
@@ -201,11 +202,10 @@ dot([], Id, V, _UpdateFun, true, Acc) ->
 dot([], _Id, _V, _UpdateFun, false, Acc) ->
     lists:reverse(Acc).
 
--spec merge(Dot1 :: #ec_dot{}, Dot2 :: #ec_dot{}, MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV) -> #ec_dot{}.
+-spec merge(Dot1 :: #ec_dot{}, Dot2 :: #ec_dot{}, MergeFun :: {fun(), fun()}) -> #ec_dot{}.
 merge(#ec_dot{replica_id=Id, counter_max=Max1, counter_min=Min1, values=V1}=Dot1, 
       #ec_dot{replica_id=Id, counter_max=Max2, counter_min=Min2, values=V2}=Dot2,
-      {AddFun, MergeFun},
-      ?EC_MERGE_DVV) ->
+      {AddFun, MergeFun}) ->
     case Max1 >= Max2 of
 	true  ->
 	    V3 = lists:sublist(V1, Max1-Max2+length(V2)),
@@ -263,21 +263,16 @@ compare_causality([_H | _T], [], _Flag) ->
 compare_causality([], [], Flag) -> 
     Flag.
 
--spec sync1(Clocks :: list(), MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV) -> #ec_dvv{}.
-sync1(Clocks, MergeFun, Flag) ->     
-    {DVV, MergeFun, Flag} = lists:foldl(fun sync2/2, {#ec_dvv{}, MergeFun, Flag}, Clocks),
-    DVV.
-
--spec sync2(Clock1 :: #ec_dvv{}, {Clock2 :: #ec_dvv{}, MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV}) -> #ec_dvv{}.
-sync2(?EC_UNDEFINED, {Clock2, MergeFun, Flag}) ->
-    {Clock2, MergeFun, Flag};
-sync2(Clock1, {?EC_UNDEFINED, MergeFun, Flag}) ->
-    {Clock1, MergeFun, Flag};
-sync2(#ec_dvv{dot_list=[], annonymus_list=[]}, {Clock2, MergeFun, Flag}) ->
-    {Clock2, MergeFun, Flag};
-sync2(Clock1, {#ec_dvv{dot_list=[], annonymus_list=[]}, MergeFun, Flag}) ->
-    {Clock1, MergeFun, Flag};
-sync2(#ec_dvv{dot_list=DL1, annonymus_list=AL1}, {#ec_dvv{dot_list=DL2, annonymus_list=AL2}, MergeFun, Flag}) ->
+-spec sync2(Clock1 :: #ec_dvv{}, {Clock2 :: #ec_dvv{}, MergeFun :: {fun(), fun()}}) -> #ec_dvv{}.
+sync2(?EC_UNDEFINED, {Clock2, MergeFun}) ->
+    {Clock2, MergeFun};
+sync2(Clock1, {?EC_UNDEFINED, MergeFun}) ->
+    {Clock1, MergeFun};
+sync2(#ec_dvv{dot_list=[], annonymus_list=[]}, {Clock2, MergeFun}) ->
+    {Clock2, MergeFun};
+sync2(Clock1, {#ec_dvv{dot_list=[], annonymus_list=[]}, MergeFun}) ->
+    {Clock1, MergeFun};
+sync2(#ec_dvv{dot_list=DL1, annonymus_list=AL1}, {#ec_dvv{dot_list=DL2, annonymus_list=AL2}, MergeFun}) ->
     DLS1 = sort_dot_list(DL1),
     DLS2 = sort_dot_list(DL2),
     AL = case compare_causality(DLS1, DLS2, ?EC_EQUAL) of
@@ -288,33 +283,33 @@ sync2(#ec_dvv{dot_list=DL1, annonymus_list=AL1}, {#ec_dvv{dot_list=DL2, annonymu
 	     _        ->
 		 sets:to_list(sets:from_list(AL1++AL2))
 	 end,
-    {#ec_dvv{dot_list=sync3(DLS1, DLS2, MergeFun, Flag), annonymus_list=AL}, MergeFun, Flag}.
+    {#ec_dvv{dot_list=sync3(DLS1, DLS2, MergeFun), annonymus_list=AL}, MergeFun}.
 
--spec sync3(DL1 :: list(), DL2 :: list(), MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV) -> list().
-sync3(DL1, DL2, MergeFun, Flag) ->    
-    sync4(DL1, DL2, MergeFun, Flag, []).
+-spec sync3(DL1 :: list(), DL2 :: list(), MergeFun :: {fun(), fun()}) -> list().
+sync3(DL1, DL2, MergeFun) ->    
+    sync4(DL1, DL2, MergeFun, []).
 
--spec sync4(DL1 :: list(), DL2 :: list(), MergeFun :: {fun(), fun()}, Flag :: ?EC_ADD_DVV | ?EC_MERGE_DVV, Acc :: list()) -> list().
-sync4([#ec_dot{replica_id=Id1}=H1 | T1]=DL1, [#ec_dot{replica_id=Id2}=H2 | T2]=DL2, MergeFun, Flag, Acc) ->
+-spec sync4(DL1 :: list(), DL2 :: list(), MergeFun :: {fun(), fun()}, Acc :: list()) -> list().
+sync4([#ec_dot{replica_id=Id1}=H1 | T1]=DL1, [#ec_dot{replica_id=Id2}=H2 | T2]=DL2, MergeFun, Acc) ->
     case Id1 =:= Id2 of
         true  ->
-            sync4(T1, T2, MergeFun, Flag, [merge(H1, H2, MergeFun, Flag) | Acc]);
+            sync4(T1, T2, MergeFun, [merge(H1, H2, MergeFun) | Acc]);
 	false ->            
 	    case {Id1, Id2, Id1 < Id2} of
                 {?EC_UNDEFINED, _, _} ->
-                    sync4(T1, DL2, MergeFun, Flag, Acc);
+                    sync4(T1, DL2, MergeFun, Acc);
                 {_, ?EC_UNDEFINED, _} ->
-                    sync4(DL1, T2, MergeFun, Flag, Acc);
+                    sync4(DL1, T2, MergeFun, Acc);
                 {_, _, true}          ->
-                    sync4(T1, DL2, MergeFun, Flag, [H1 | Acc]);
+                    sync4(T1, DL2, MergeFun, [H1 | Acc]);
                 {_, _, false}         ->
-                    sync4(DL1, T2, MergeFun, Flag, [H2 | Acc])
+                    sync4(DL1, T2, MergeFun, [H2 | Acc])
             end
     end;
-sync4([], [H | T], MergeFun, Flag, Acc) ->
-    sync4([], T, MergeFun, Flag, [H | Acc]);
-sync4([H | T], [], MergeFun, Flag, Acc) ->
-    sync4(T, [], MergeFun, Flag, [H | Acc]);
-sync4([], [], _MergeFun, _Flag, Acc) ->
+sync4([], [H | T], MergeFun, Acc) ->
+    sync4([], T, MergeFun, [H | Acc]);
+sync4([H | T], [], MergeFun, Acc) ->
+    sync4(T, [], MergeFun, [H | Acc]);
+sync4([], [], _MergeFun, Acc) ->
     lists:reverse(Acc).
 

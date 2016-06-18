@@ -22,7 +22,7 @@
 
 -export([new_crdt/2,
 	 delta_crdt/4,
-	 reconcile_crdt/4,
+	 reconcile_crdt/3,
 	 update_fun_crdt/1,
 	 merge_fun_crdt/1,
 	 query_crdt/2,
@@ -31,7 +31,6 @@
 	 causal_context_crdt/2,
 	 causal_consistent_crdt/5,
 	 causal_history_crdt/3,
-	 change_status_crdt/2,
 	 add_gcounter/3,
 	 add_pncounter/3,
 	 merge_pncounter/3,
@@ -54,8 +53,8 @@ delta_crdt(Ops, DL, #ec_dvv{module=?MODULE, type=Type}=State, ServerId) ->
 	    ec_crdt_util:new_delta(Value, DL, State, ServerId)
     end.
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: term()) -> #ec_dvv{}.
-reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, _Flag, _DataStatus) ->
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> #ec_dvv{}.
+reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, _Flag) ->
     State.
 
 -spec causal_consistent_crdt(Delta :: #ec_dvv{}, 
@@ -74,10 +73,6 @@ causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name}=Delta,
 causal_history_crdt(#ec_dvv{module=?MODULE}=State, ServerId, Flag) ->
     ec_crdt_util:causal_history(State, ServerId, Flag).
     
--spec change_status_crdt(DVV :: #ec_dvv{}, Status :: term()) -> #ec_dvv{}.
-change_status_crdt(#ec_dvv{module=?MODULE}=DVV, Status) ->
-    DVV#ec_dvv{status=Status}.
-
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> term().
 query_crdt([], #ec_dvv{module=?MODULE}=State) ->
     query_crdt(?EC_UNDEFINED, State);

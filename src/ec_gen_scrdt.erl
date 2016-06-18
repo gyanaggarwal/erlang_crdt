@@ -22,7 +22,7 @@
 
 -export([new_crdt/2,
 	 delta_crdt/4,
-	 reconcile_crdt/4,
+	 reconcile_crdt/3,
 	 update_fun_crdt/1,
 	 merge_fun_crdt/1,
 	 query_crdt/2,
@@ -30,8 +30,7 @@
 	 mutated_crdt/1,
 	 causal_context_crdt/2,
 	 causal_consistent_crdt/5,
-	 causal_history_crdt/3,
-	 change_status_crdt/2]).
+	 causal_history_crdt/3]).
 	 
 -include("erlang_crdt.hrl").
 
@@ -49,8 +48,8 @@ delta_crdt(Ops, DL, #ec_dvv{module=?MODULE}=State, ServerId) ->
 	    ec_crdt_util:new_delta(Value, DL, State, ServerId)
     end.
 
--spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL, DataStatus :: term()) -> #ec_dvv{}.
-reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[AD1]}=State, ServerId, ?EC_LOCAL, _DataStatus) ->
+-spec reconcile_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_LOCAL | ?EC_GLOBAL) -> #ec_dvv{}.
+reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[AD1]}=State, ServerId, ?EC_LOCAL) ->
     Dot1 = ec_dvv:find_dot(State, ServerId),
     {Tag, V9} = case Dot1#ec_dot.values of
 		    [V1]     ->
@@ -68,10 +67,10 @@ reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, dot_list=DL1, annonymus_list=[
 
     DL9 = ec_dvv:replace_dot_list(DL1, ec_dvv:empty_dot(Dot1)),
     State#ec_dvv{dot_list=DL9, annonymus_list=[AD9]};
-reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_GLOBAL, _DataStatus) ->			     
+reconcile_crdt(#ec_dvv{module=?MODULE, type=Type, annonymus_list=[D1, D2]}=State, _ServerId, ?EC_GLOBAL) ->		     
     D3 = reconcile(Type, ?EC_GLOBAL, D1, D2),
     State#ec_dvv{annonymus_list=[D3]};
-reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, ?EC_GLOBAL, _DataStatus) ->
+reconcile_crdt(#ec_dvv{module=?MODULE}=State, _ServerId, ?EC_GLOBAL) ->
     State.
 
 -spec update_fun_crdt(Args :: list()) -> {fun(), fun()}.
@@ -110,10 +109,6 @@ causal_consistent_crdt(#ec_dvv{module=?MODULE, type=Type, name=Name}=Delta,
 -spec causal_history_crdt(State :: #ec_dvv{}, ServerId :: term(), Flag :: ?EC_CAUSAL_SERVER_ONLY | ?EC_CAUSAL_EXCLUDE_SERVER) -> #ec_dvv{}.
 causal_history_crdt(#ec_dvv{module=?MODULE}=State, ServerId, Flag) ->
     ec_crdt_util:causal_history(State, ServerId, Flag).
-
--spec change_status_crdt(DVV :: #ec_dvv{}, Status :: term()) -> #ec_dvv{}.
-change_status_crdt(#ec_dvv{module=?MODULE}=DVV,Status) ->    
-    DVV#ec_dvv{status=Status}.
 
 -spec query_crdt(Criteria :: term(), State :: #ec_dvv{}) -> sets:set() | maps:map() | {ok, term()} | error.
 query_crdt([Criteria], #ec_dvv{module=?MODULE}=State)                                            ->
