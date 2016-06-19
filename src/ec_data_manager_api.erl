@@ -23,7 +23,7 @@
 -export([write_delta_mutation/1,
 	 write_delta_interval/1,
 	 read_delta_interval/2,
-	 read_data/0]).
+	 read_data/2]).
 
 -include("erlang_crdt.hrl").
 
@@ -39,9 +39,9 @@ write_delta_interval(#ec_dvv{}=DI) ->
 read_delta_interval(CH, ServerId) ->
     gen_server:call(?EC_DATA_SERVER, {?EC_MSG_READ_DI, {CH, ServerId}}).
 
--spec read_data() -> {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}.
-read_data() ->
-    gen_server:call(?EC_DATA_SERVER, ?EC_MSG_READ_DATA).
+-spec read_data(CrdtSpec :: term(), ServerId :: term()) -> {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}.
+read_data(CrdtSpec, ServerId) ->
+    gen_server:call(?EC_DATA_SERVER, {?EC_MSG_READ_DATA, {CrdtSpec, ServerId}}).
 
 
 

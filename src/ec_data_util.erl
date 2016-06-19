@@ -18,7 +18,9 @@
 
 -module(ec_data_util).
 
--export([get_delta_interval/3]).
+-export([get_delta_interval/3,
+	 get_data/4,
+	 get_file_name/3]).
 
 -include("erlang_crdt.hrl").
 
@@ -26,6 +28,23 @@
 get_delta_interval(Q0, CH, ServerId) ->
     get_delta_interval(Q0, CH, ServerId, false, []).
 
+-spec get_data(DMQ0 :: queue:queue(), DIQ0 :: queue:queue(), CrdtSpec :: term(), SereverId :: term()) -> {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}.
+get_data(DMQ0, DIQ0, {Type, Name}, ServerId) ->
+    DS0 = ec_gen_crdt:new(Type, Name),
+    DM0 = ec_gen_crdt:new(Type, Name),
+    DI0 = case queue:out_r(DIQ0) of
+	      {empty, _} ->
+		  ec_gen_crdt:new(Type, Name);
+	      {{value, DI}, _} ->
+		  ec_gen_crdt:reset(DI, get_server_id(DI))
+          end,
+    get_data(DMQ0, ServerId, DM0, DI0, DS0, false).
+
+-spec get_file_name(NodeId :: term(), DataDir :: string(), FileName :: string()) -> string().
+get_file_name(NodeId, DataDir, FileName) ->
+    NodeName = lists:takewhile(fun(X) -> X =/= $@ end, atom_to_list(NodeId)),
+    DataDir ++ NodeName ++ FileName.
+				       
 % private function
 
 -spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{} | ?EC_UNDEFINED, ServerId :: term(), Flag :: true | false, Acc :: list()) -> list().
@@ -45,8 +64,42 @@ get_delta_interval(Q0, CH, ServerId, Flag, Acc) ->
 	{{{value, _}, Q1}, _}                                                       ->
 	    get_delta_interval(Q1, CH, ServerId, Flag, Acc)
     end.
- 
 
+-spec get_server_id(DI :: #ec_dvv{}) -> term().
+get_server_id(#ec_dvv{dot_list=[#ec_dot{replica_id=ServerId}]}) -> 
+    ServerId.
+
+-spec get_data(DMQ0 :: queue:queue(), ServerId :: term(), DM0 :: #ec_dvv{}, DI0 :: #ec_dvv{}, DS0 :: #ec_dvv{}, Flag :: true | false) -> {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}.
+get_data(DMQ0, ServerId, DM0, DI0, DS0, Flag) ->
+    case queue:out(DMQ0) of
+	{empty, _}           ->
+	    {DM0, DI0, DS0};
+	{{value, DVX}, DMQ9} ->
+	    ServerId1 = get_server_id(DVX),
+	    {ok, DS9} = ec_gen_crdt:merge(DVX, DS0, ServerId1),
+	    {DM9, DI9, Flag9} = case ServerId1 =:= ServerId of
+				    false ->
+					{DM0, DI0, Flag};
+				    true  ->
+					DMX3 = ec_gen_crdt:reset(DVX, ServerId),
+					{DIX3, FlagX3} = case Flag of
+							     true  ->
+								 {ok, DIX1} = ec_gen_crdt:merge(DVX, DI0, ServerId),
+								 {DIX1, Flag};
+							     false ->
+								 case ec_gen_crdt:causal_consistent(DVX, DI0, ServerId, ?EC_GLOBAL) of
+								     [] ->
+									 {ok, DIX2} = ec_gen_crdt:merge(DVX, DI0, ServerId),
+									 {DIX2, true};
+								     _  ->
+									 {DI0, Flag}
+								 end
+                                                         end,
+					{DMX3, DIX3, FlagX3}
+				end,
+	    get_data(DMQ9, ServerId, DM9, DI9, DS9, Flag9)
+    end.
+	    
 
 
     

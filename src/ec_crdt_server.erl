@@ -36,8 +36,10 @@ start_link(AppConfig) ->
 
 init([AppConfig]) ->
     random:seed(erlang:phash2([node()]), erlang:monotonic_time(), erlang:unique_integer()),
+    NodeId = ec_crdt_config:get_node_id(AppConfig),
+    CrdtSpec = ec_crdt_config:get_crdt_spec(AppConfig),
     DataManager = ec_crdt_config:get_data_manager(AppConfig),
-    {DV0, DI0, DS0} = DataManager:read_data(),
+    {DV0, DI0, DS0} = DataManager:read_data(CrdtSpec, NodeId),
     State = #ec_crdt_state{timeout_period = ec_time_util:get_random(ec_crdt_config:get_timeout_period(AppConfig)),
 			   state_dvv      = DS0, 
 			   delta_dvv      = DV0, 
@@ -45,23 +47,15 @@ init([AppConfig]) ->
 			   app_config     = AppConfig},
     {ok, State}.
 
-handle_call(?EC_MSG_STOP,
+handle_call({?EC_MSG_RESUME, NodeList},
 	    _From,
-	    #ec_crdt_state{}=State) ->
-    print(stopped),
-    {reply, 
-     ok, 
-     State#ec_crdt_state{last_msg=?EC_MSG_STOP, 
-			 status=?EC_INACTIVE}};
-handle_call(?EC_MSG_RESUME,
-	    _From,
-	    #ec_crdt_state{timeout_period=TimeoutPeriod}=State) ->
+	    #ec_crdt_state{timeout_period=TimeoutPeriod, app_config=AppConfig}=State) ->
     print(resumed),
     {reply, 
      ok, 
-     State#ec_crdt_state{last_msg=?EC_MSG_RESUME, 
-			 status=?EC_ACTIVE, 
-			 timeout_start=ec_time_util:get_current_time()}, 
+     State#ec_crdt_state{status=?EC_ACTIVE, 
+			 timeout_start=ec_time_util:get_current_time(),
+			 replica_cluster=lists:delete(ec_crdt_config:get_node_id(AppConfig), NodeList)}, 
      TimeoutPeriod};
 handle_call({?EC_MSG_CAUSAL_CONTEXT, Ops}, 
 	    _From,
@@ -110,13 +104,13 @@ handle_call(_Msg,
 
 handle_cast({stop, Reason}, 
 	    #ec_crdt_state{}=State) ->
+    print(stopped),
     {stop, Reason, State};
 handle_cast({?EC_MSG_SETUP_REPL, NodeList}, 
 	    #ec_crdt_state{timeout_period=TimeoutPeriod,
 			   app_config=AppConfig}=State) ->
     {noreply, 
-     State#ec_crdt_state{last_msg=?EC_MSG_SETUP_REPL,
-			 status=?EC_ACTIVE,
+     State#ec_crdt_state{status=?EC_ACTIVE,
 			 timeout_start=ec_time_util:get_current_time(), 
 			 replica_cluster=lists:delete(ec_crdt_config:get_node_id(AppConfig), NodeList)}, 
      TimeoutPeriod};

@@ -21,9 +21,11 @@
 -export([get_env/0, 
          get_node_id/1,
          get_timeout_period/1,
+	 get_crdt_spec/1,
          get_data_manager/1,
+	 get_storage_data/1,
 	 get_data_dir/1,
-         get_file_state_mutation/1,
+         get_file_delta_mutation/1,
 	 get_file_delta_interval/1,
          get_debug_mode/1,
          get_sup_restart_intensity/1,
@@ -33,10 +35,12 @@
 -include("erlang_crdt.hrl").
 
 -define(TIMEOUT_PERIOD,            {milli_seconds, {10000, 20000}}).
+-define(CRDT_SPEC,                 {?EC_COMPMAP, ?EC_UNDEFINED}).
 -define(DATA_MANAGER,              ec_data_manager_api).
+-define(STORAGE_DATA,              ec_storage_data_api).
 -define(DATA_DIR,                  "./").
--define(FILE_STATE_MUTATION,       "_state.data").
--define(FILE_DELTA_INTERVAL,       "_delta.data").
+-define(FILE_DELTA_MUTATION,       "_dm.data").
+-define(FILE_DELTA_INTERVAL,       "_di.data").
 -define(DEBUG_MODE,                false).
 -define(SUP_RESTART_INTENSITY,     1).
 -define(SUP_RESTART_PERIOD,        5).
@@ -46,9 +50,11 @@
 get_env() ->
   #ec_app_config{node_id                  = node(),
                  timeout_period           = ec_time_util:convert_to_milli_seconds(ec_config:get_env(erlang_crdt, timeout_period, ?TIMEOUT_PERIOD)),
+		 crdt_spec                = ec_config:get_env(erlang_crdt, crdt_spec,                ?CRDT_SPEC),
                  data_manager             = ec_config:get_env(erlang_crdt, data_manager,             ?DATA_MANAGER),
+		 storage_data             = ec_config:get_env(erlang_crdt, storage_data,             ?STORAGE_DATA),
 		 data_dir                 = ec_config:get_env(erlang_crdt, data_dir,                 ?DATA_DIR),
-                 file_state_mutation      = ec_config:get_env(erlang_crdt, file_state_mutation,      ?FILE_STATE_MUTATION),
+                 file_delta_mutation      = ec_config:get_env(erlang_crdt, file_delta_mutation,      ?FILE_DELTA_MUTATION),
 		 file_delta_interval      = ec_config:get_env(erlang_crdt, file_delta_interval,      ?FILE_DELTA_INTERVAL),
                  debug_mode               = ec_config:get_env(erlang_crdt, debug_mode,               ?DEBUG_MODE),
                  sup_restart_intensity    = ec_config:get_env(erlang_crdt, sup_restart_intensity,    ?SUP_RESTART_INTENSITY),
@@ -63,17 +69,25 @@ get_node_id(#ec_app_config{node_id=NodeId}) ->
 get_timeout_period(#ec_app_config{timeout_period=TimeoutPeriod}) ->
     TimeoutPeriod.
 
+-spec get_crdt_spec(AppConfig :: #ec_app_config{}) -> term().
+get_crdt_spec(#ec_app_config{crdt_spec=CrdtSpec}) ->
+    CrdtSpec.
+
 -spec get_data_manager(AppConfig :: #ec_app_config{}) -> atom().
-get_data_manager(#ec_app_config{data_manager=DataManager}) ->
+get_data_manager(#ec_app_config{data_manager=DataManager}) ->    
     DataManager.
+
+-spec get_storage_data(AppConfig :: #ec_app_config{}) -> atom().
+get_storage_data(#ec_app_config{storage_data=StorageData}) ->    
+    StorageData.
 
 -spec get_data_dir(AppConfig :: #ec_app_config{}) -> string().
 get_data_dir(#ec_app_config{data_dir=DataDir}) ->
     DataDir.
 
--spec get_file_state_mutation(AppConfig :: #ec_app_config{}) -> string().
-get_file_state_mutation(#ec_app_config{file_state_mutation=FileStateMutation}) ->
-    FileStateMutation.
+-spec get_file_delta_mutation(AppConfig :: #ec_app_config{}) -> string().
+get_file_delta_mutation(#ec_app_config{file_delta_mutation=FileDeltaMutation}) ->
+    FileDeltaMutation.
 
 -spec get_file_delta_interval(AppConfig :: #ec_app_config{}) -> string().
 get_file_delta_interval(#ec_app_config{file_delta_interval=FileDeltaInterval}) ->

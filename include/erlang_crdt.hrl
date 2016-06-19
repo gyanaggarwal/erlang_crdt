@@ -77,6 +77,7 @@
 
 -define(EC_UNDEFINED,                 undefined).
 -define(EC_NOT_SPECIFIED,             not_specified).
+-define(EC_BAD_DATA,                  bad_data).
 -define(EC_ACTIVE,                    active).
 -define(EC_INACTIVE,                  in_active).
 
@@ -91,7 +92,6 @@
 -define(EC_MSG_QUERY,                 msg_query).
 -define(EC_MSG_CAUSAL_CONTEXT,        msg_causal_context).
 -define(EC_MSG_MERGE,                 msg_merge).
--define(EC_MSG_STOP,                  msg_stop).
 -define(EC_MSG_RESUME,                msg_resume).
 
 -define(EC_MSG_WRITE_DM,              msg_write_dm).
@@ -114,9 +114,11 @@
 
 -record(ec_app_config,     {node_id                          :: atom(),
 			    timeout_period={0, 0}            :: {non_neg_integer(), non_neg_integer()},
+			    crdt_spec                        :: term(),
+			    storage_data                     :: atom(),
 			    data_manager                     :: atom(),
 			    data_dir                         :: string(),
-			    file_state_mutation              :: string(),
+			    file_delta_mutation              :: string(),
 			    file_delta_interval              :: string(),
 			    debug_mode=false                 :: true | false,
 			    sup_restart_intensity=100        :: non_neg_integer(),
@@ -135,7 +137,7 @@
 
 -record(ec_data_state,     {delta_mutation=queue:new()       :: queue:queue(),
 			    delta_interval=queue:new()       :: queue:queue(),
-			    file_state_mutation              :: file:io_device(),
+			    file_delta_mutation              :: file:io_device(),
 			    file_delta_interval              :: file:io_device(),
 			    app_config                       :: #ec_app_config{}}).
 

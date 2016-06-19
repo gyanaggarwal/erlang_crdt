@@ -16,26 +16,30 @@
 %% under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-{ec_dvv,                  [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_crdt_util,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_sets_util,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_time_util,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_gen_crdt,             [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_gen_mcrdt,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_gen_scrdt,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_gen_ccrdt,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_config,               [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_crdt_config,          [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_data_server,          [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_crdt_server,          [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_crdt_peer_api,        [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_data_manager,         [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_data_manager_api,     [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_data_util,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_sup,                  [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_app,                  [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{erlang_crdt,             [{i, "../include/"}, {outdir, "../ebin/"}]}.
-{ec_gen_crdt_test,        [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_dvv,                         [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_crdt_util,                   [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_sets_util,                   [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_time_util,                   [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_gen_crdt,                    [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_gen_mcrdt,                   [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_gen_scrdt,                   [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_gen_ccrdt,                   [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_config,                      [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_crdt_config,                 [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_data_server,                 [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_crdt_server,                 [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_crdt_peer_api,               [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_data_manager,                [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_data_manager_api,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_data_util,                   [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_storage_data,                [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_storage_data_api,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_storage_data_persist,        [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_storage_data_operation,      [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_sup,                         [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_app,                         [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{erlang_crdt,                    [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{ec_gen_crdt_test,               [{i, "../include/"}, {outdir, "../ebin/"}]}.
 
 
 

@@ -24,7 +24,7 @@
 	 mutate/2,
 	 query/2,
 	 stop/1,
-	 resume/1,
+	 resume/2,
 	 pretty_query/2]).
 
 -include("erlang_crdt.hrl").
@@ -52,10 +52,10 @@ query(Node, Criteria) ->
 % only for demo
 
 stop(Node) ->
-    gen_server:call({?EC_CRDT_SERVER, Node}, ?EC_MSG_STOP).
+    gen_server:cast({?EC_CRDT_SERVER, Node}, {stop, normal}).
 
-resume(Node) ->
-    gen_server:call({?EC_CRDT_SERVER, Node}, ?EC_MSG_RESUME).
+resume(Node, NodeList) ->
+    gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_RESUME, NodeList}).
 
 pretty_query(Node, Criteria) ->
     ec_sets_util:pretty(query(Node, Criteria)).
