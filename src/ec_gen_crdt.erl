@@ -101,10 +101,15 @@ merge(#ec_dvv{module=Mod, type=Type, name=Name}=Delta,
       ServerId) ->
     case delta_state(Delta, State, ServerId) of
 	{ok, {Delta1, State1}} ->
-	    State2 = ec_dvv:sync(Delta1, State1, Mod:merge_fun_crdt([Type])),
-	    State3 = ec_crdt_util:add_param(State2, State1),
-	    State4 = Mod:reconcile_crdt(State3, ServerId, ?EC_GLOBAL),
-	    {ok, ec_crdt_util:add_param(State4#ec_dvv{status=?EC_DVV_DIRTY}, State1)};
+	    case ec_crdt_util:is_dirty(Delta1) of
+		true  ->
+		    State2 = ec_dvv:sync(Delta1, State1, Mod:merge_fun_crdt([Type])),
+		    State3 = ec_crdt_util:add_param(State2, State1),
+		    State4 = Mod:reconcile_crdt(State3, ServerId, ?EC_GLOBAL),
+		    {ok, ec_crdt_util:add_param(State4#ec_dvv{status=?EC_DVV_DIRTY}, State1)};
+		false ->
+		    {ok, State1}
+            end;
 	{error, Reason}        ->
 	    {error, Reason}
     end.

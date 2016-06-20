@@ -53,11 +53,11 @@ get_delta_interval(Q0, CH, ServerId, Flag, Acc) ->
 	{{empty, _}, _}                                                             ->
 	    lists:reverse(Acc);
 	{{{value, #ec_dvv{dot_list=[#ec_dot{replica_id=ServerId}]}=DI}, Q1}, true}  ->
-	    get_delta_interval(Q1, CH, ServerId, Flag, [DI | Acc]);
+	    get_delta_interval(Q1, CH, ServerId, Flag, add_delta_interval(DI, Acc));
 	{{{value, #ec_dvv{dot_list=[#ec_dot{replica_id=ServerId}]}=DI}, Q1}, false} ->
 	    case ec_gen_crdt:causal_consistent(DI, CH, ServerId, ?EC_GLOBAL) of
 		[] ->
-		    get_delta_interval(Q1, CH, ServerId, true, [DI | Acc]);
+		    get_delta_interval(Q1, CH, ServerId, true, add_delta_interval(DI, Acc));
 		_  ->
 		    get_delta_interval(Q1, CH, ServerId, Flag, Acc)
             end;
@@ -65,12 +65,16 @@ get_delta_interval(Q0, CH, ServerId, Flag, Acc) ->
 	    get_delta_interval(Q1, CH, ServerId, Flag, Acc)
     end.
 
+-spec add_delta_interval(DI :: #ec_dvv{}, Acc :: list()) -> list().
+add_delta_interval(#ec_dvv{}=DI, Acc) ->
+    [ec_gen_crdt:mutated(DI) | Acc].
+
 -spec get_server_id(DI :: #ec_dvv{}) -> term().
 get_server_id(#ec_dvv{dot_list=[#ec_dot{replica_id=ServerId}]}) -> 
     ServerId.
 
 -spec get_data(DMQ0 :: queue:queue(), ServerId :: term(), DM0 :: #ec_dvv{}, DI0 :: #ec_dvv{}, DS0 :: #ec_dvv{}, Flag :: true | false) -> {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}.
-get_data(DMQ0, ServerId, DM0, DI0, DS0, Flag) ->
+get_data(DMQ0, ServerId, DM0, #ec_dvv{di_num=DINum}=DI0, DS0, Flag) ->
     case queue:out(DMQ0) of
 	{empty, _}           ->
 	    {DM0, DI0, DS0};
@@ -85,12 +89,12 @@ get_data(DMQ0, ServerId, DM0, DI0, DS0, Flag) ->
 					{DIX3, FlagX3} = case Flag of
 							     true  ->
 								 {ok, DIX1} = ec_gen_crdt:merge(DVX, DI0, ServerId),
-								 {DIX1, Flag};
+								 {DIX1#ec_dvv{di_num=DINum}, Flag};
 							     false ->
 								 case ec_gen_crdt:causal_consistent(DVX, DI0, ServerId, ?EC_GLOBAL) of
 								     [] ->
 									 {ok, DIX2} = ec_gen_crdt:merge(DVX, DI0, ServerId),
-									 {DIX2, true};
+									 {DIX2#ec_dvv{di_num=DINum}, true};
 								     _  ->
 									 {DI0, Flag}
 								 end

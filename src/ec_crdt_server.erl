@@ -49,13 +49,15 @@ init([AppConfig]) ->
 
 handle_call({?EC_MSG_RESUME, NodeList},
 	    _From,
-	    #ec_crdt_state{timeout_period=TimeoutPeriod, app_config=AppConfig}=State) ->
-    print(resumed),
+	    #ec_crdt_state{timeout_period=TimeoutPeriod, 
+			   app_config=AppConfig}=State) ->
+    print(replica_resumed),
+    NodeId = ec_crdt_config:get_node_id(AppConfig),
     {reply, 
      ok, 
      State#ec_crdt_state{status=?EC_ACTIVE, 
 			 timeout_start=ec_time_util:get_current_time(),
-			 replica_cluster=lists:delete(ec_crdt_config:get_node_id(AppConfig), NodeList)}, 
+			 replica_cluster=lists:delete(NodeId, NodeList)}, 
      TimeoutPeriod};
 handle_call({?EC_MSG_CAUSAL_CONTEXT, Ops}, 
 	    _From,
@@ -78,7 +80,7 @@ handle_call({?EC_MSG_MUTATE, {Ops, DL}},
     {Reply, State1} = case ec_gen_crdt:mutate(Ops, DL, DeltaDvv, DeltaInterval, StateDvv, NodeId) of
 			  {ok, {DeltaDvv1, DeltaInterval1, StateDvv1}} ->
 			      DataManager = ec_crdt_config:get_data_manager(AppConfig),
-			      DataManager:write_delta_mutation(ec_gen_crdt:mutated(DeltaDvv1)),
+			      DataManager:write_delta_mutation(DeltaDvv1),
 			      {ok, State#ec_crdt_state{state_dvv=StateDvv1, delta_dvv=ec_gen_crdt:reset(DeltaDvv1, NodeId), delta_interval=DeltaInterval1}};
 			  {error, Reason}            ->
 			      {{error, Reason}, State}
@@ -104,15 +106,17 @@ handle_call(_Msg,
 
 handle_cast({stop, Reason}, 
 	    #ec_crdt_state{}=State) ->
-    print(stopped),
+    print(replica_stopped),
     {stop, Reason, State};
 handle_cast({?EC_MSG_SETUP_REPL, NodeList}, 
 	    #ec_crdt_state{timeout_period=TimeoutPeriod,
 			   app_config=AppConfig}=State) ->
+    print(replica_setup_complete),
+    NodeId = ec_crdt_config:get_node_id(AppConfig),
     {noreply, 
      State#ec_crdt_state{status=?EC_ACTIVE,
 			 timeout_start=ec_time_util:get_current_time(), 
-			 replica_cluster=lists:delete(ec_crdt_config:get_node_id(AppConfig), NodeList)}, 
+			 replica_cluster=lists:delete(NodeId, NodeList)}, 
      TimeoutPeriod};
 handle_cast({?EC_MSG_MERGE, {SenderNodeId, DeltaList, CausalHistory}},
 	    #ec_crdt_state{last_msg=LastMsg, 
@@ -161,8 +165,8 @@ handle_info(timeout,
     DeltaInterval1 = case ec_crdt_util:is_dirty(DeltaInterval) of
 			 true  ->
 			     MDeltaInterval = ec_gen_crdt:mutated(DeltaInterval),
-			     DataManager:write_delta_interval(MDeltaInterval),
-			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, [MDeltaInterval], CausalHistory),
+			     DataManager:write_delta_interval(DeltaInterval),
+			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, [MDeltaInterval], ?EC_NOT_SPECIFIED),
 			     ec_gen_crdt:reset(DeltaInterval, NodeId);
 			 false ->
 			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, ?EC_NOT_SPECIFIED, CausalHistory),
@@ -202,17 +206,17 @@ get_di_num_list(DIList) ->
 print_mutate(Msg, DINum, LastMsg) ->
     case LastMsg =:= ?EC_MSG_MUTATE of
 	true  ->
-	    io:fwrite("   mutate   ~p delta_interval=[~p]~n", [Msg, DINum]);
+	    io:fwrite("   mutate   ~p delta_interval=[~w]~n", [Msg, DINum]);
 	false ->
-	    io:fwrite("~n   mutate   ~p delta_interval=[~p]~n", [Msg, DINum])
+	    io:fwrite("~n   mutate   ~p delta_interval=[~w]~n", [Msg, DINum])
     end.
 
 print_merge(Msg, NumList, LastMsg) ->
     case LastMsg =:= ?EC_MSG_MERGE of
 	true  ->
-	    io:fwrite("   merge    ~p delta_interval=~p~n", [Msg, NumList]);
+	    io:fwrite("   merge    ~p delta_interval=~w~n", [Msg, NumList]);
 	false ->
-	    io:fwrite("~n   merge    ~p delta_interval=~p~n", [Msg, NumList])
+	    io:fwrite("~n   merge    ~p delta_interval=~w~n", [Msg, NumList])
     end.
 
 print(MsgTag) ->
