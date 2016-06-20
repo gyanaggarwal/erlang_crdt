@@ -46,6 +46,9 @@ mutate(Node, Ops) ->
 	    gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_MUTATE, {Ops, DL}})
     end.
 
+resume(Node, NodeList) ->    
+    gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_RESUME, NodeList}).
+
 query(Node, Criteria) ->
     gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_QUERY, Criteria}).
 
@@ -53,9 +56,6 @@ query(Node, Criteria) ->
 
 stop(Node) ->
     gen_server:cast({?EC_CRDT_SERVER, Node}, {stop, normal}).
-
-resume(Node, NodeList) ->
-    gen_server:call({?EC_CRDT_SERVER, Node}, {?EC_MSG_RESUME, NodeList}).
 
 pretty_query(Node, Criteria) ->
     ec_sets_util:pretty(query(Node, Criteria)).
