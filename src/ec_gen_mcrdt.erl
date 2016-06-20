@@ -201,19 +201,19 @@ disable_win(_Value1, _Value2, DefaultValue) ->
 -spec new_value(Ops :: term(), Type :: atom()) -> term().
 new_value({Tag, Value}, Type) ->
     case {Type, Tag} of
-	{?EC_MVREGISTER, ?EC_OPS_VAL}                ->
+	{?EC_MVREGISTER, ?EC_OPS_VAL}                    ->
 	    {ok, Value};
-	{?EC_EWFLAG, ?EC_OPS_VAL}                    ->
+	{?EC_EWFLAG, ?EC_OPS_VAL} when is_boolean(Value) ->
 	    {ok, Value};
-	{?EC_DWFLAG, ?EC_OPS_VAL}                    ->
+	{?EC_DWFLAG, ?EC_OPS_VAL} when is_boolean(Value) ->
 	    Value;
-	{?EC_GCOUNTER, ?EC_OPS_INC} when Value >= 0  ->
+	{?EC_GCOUNTER, ?EC_OPS_INC} when Value >= 0      ->
 	    {ok, Value};
-	{?EC_PNCOUNTER, ?EC_OPS_INC} when Value >= 0 ->
+	{?EC_PNCOUNTER, ?EC_OPS_INC} when Value >= 0     ->
 	    {ok, {Value, 0}};
-	{?EC_PNCOUNTER, ?EC_OPS_DEC} when Value >= 0 ->
+	{?EC_PNCOUNTER, ?EC_OPS_DEC} when Value >= 0     ->
 	    {ok, {0, Value}};
-	{_, _}                                       ->
+	{_, _}                                           ->
 	    error
     end.
 
