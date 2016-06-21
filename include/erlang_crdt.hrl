@@ -115,6 +115,7 @@
 -record(ec_app_config,     {node_id                          :: atom(),
 			    timeout_period={0, 0}            :: {non_neg_integer(), non_neg_integer()},
 			    crdt_spec                        :: term(),
+			    optimized_anti_entropy=false     :: true | false,
 			    storage_data                     :: atom(),
 			    data_manager                     :: atom(),
 			    data_dir                         :: string(),

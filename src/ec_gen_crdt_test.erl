@@ -271,7 +271,7 @@ get_data(FileNameDM, FileNameDI) ->
     {ok, DIQ}    = ec_storage_data_operation:read(AppConfig, FileDI),
     ec_storage_data_operation:close(FileDM),
     ec_storage_data_operation:close(FileDI),
-    {DM, DI, DS} = ec_data_util:get_data(DMQ, DIQ, {?EC_COMPMAP, ?EC_UNDEFINED}, node()),
+    {_DM, DI, _DS} = ec_data_util:get_data(DMQ, DIQ, {?EC_COMPMAP, ?EC_UNDEFINED}, node()),
     DI.
 
     

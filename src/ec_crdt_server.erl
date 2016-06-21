@@ -166,7 +166,7 @@ handle_info(timeout,
 			 true  ->
 			     MDeltaInterval = ec_gen_crdt:mutated(DeltaInterval),
 			     DataManager:write_delta_interval(DeltaInterval),
-			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, [MDeltaInterval], ?EC_NOT_SPECIFIED),
+			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, [MDeltaInterval], get_causal_history(CausalHistory, AppConfig)),
 			     ec_gen_crdt:reset(DeltaInterval, NodeId);
 			 false ->
 			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, ?EC_NOT_SPECIFIED, CausalHistory),
@@ -198,6 +198,14 @@ merge_fun(SenderNodeId, DeltaInterval, StateDvv, DataManager) ->
 	    StateDvv1;
 	 _Other         ->
             StateDvv
+    end.
+
+get_causal_history(CausalHistory, AppConfig) ->
+    case ec_crdt_config:get_optimized_anti_entropy(AppConfig) of
+	true  ->
+	    CausalHistory;
+	false ->
+	    ?EC_NOT_SPECIFIED
     end.
 
 get_di_num_list(DIList) ->    

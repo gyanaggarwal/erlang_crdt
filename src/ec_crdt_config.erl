@@ -22,6 +22,7 @@
          get_node_id/1,
          get_timeout_period/1,
 	 get_crdt_spec/1,
+	 get_optimized_anti_entropy/1,
          get_data_manager/1,
 	 get_storage_data/1,
 	 get_data_dir/1,
@@ -36,6 +37,7 @@
 
 -define(TIMEOUT_PERIOD,            {milli_seconds, {10000, 20000}}).
 -define(CRDT_SPEC,                 {?EC_COMPMAP, ?EC_UNDEFINED}).
+-define(OPTIMIZED_ANTI_ENTROPY,    false).
 -define(DATA_MANAGER,              ec_data_manager_api).
 -define(STORAGE_DATA,              ec_storage_data_api).
 -define(DATA_DIR,                  "./").
@@ -51,6 +53,7 @@ get_env() ->
   #ec_app_config{node_id                  = node(),
                  timeout_period           = ec_time_util:convert_to_milli_seconds(ec_config:get_env(erlang_crdt, timeout_period, ?TIMEOUT_PERIOD)),
 		 crdt_spec                = ec_config:get_env(erlang_crdt, crdt_spec,                ?CRDT_SPEC),
+		 optimized_anti_entropy   = ec_config:get_env(erlang_crdt, optimized_anti_entropy,   ?OPTIMIZED_ANTI_ENTROPY),
                  data_manager             = ec_config:get_env(erlang_crdt, data_manager,             ?DATA_MANAGER),
 		 storage_data             = ec_config:get_env(erlang_crdt, storage_data,             ?STORAGE_DATA),
 		 data_dir                 = ec_config:get_env(erlang_crdt, data_dir,                 ?DATA_DIR),
@@ -72,6 +75,10 @@ get_timeout_period(#ec_app_config{timeout_period=TimeoutPeriod}) ->
 -spec get_crdt_spec(AppConfig :: #ec_app_config{}) -> term().
 get_crdt_spec(#ec_app_config{crdt_spec=CrdtSpec}) ->
     CrdtSpec.
+
+-spec get_optimized_anti_entropy(AppConfig :: #ec_app_config{}) -> true | false.
+get_optimized_anti_entropy(#ec_app_config{optimized_anti_entropy=OptimizedAntiEntropy}) ->
+    OptimizedAntiEntropy.
 
 -spec get_data_manager(AppConfig :: #ec_app_config{}) -> atom().
 get_data_manager(#ec_app_config{data_manager=DataManager}) ->    
