@@ -41,10 +41,8 @@ init([AppConfig]) ->
     FileNameDI   = ec_data_util:get_file_name(NodeId, DataDir, ec_crdt_config:get_file_delta_interval(AppConfig)),
     {ok, FileDM} = ec_storage_data_operation:open(FileNameDM),
     {ok, FileDI} = ec_storage_data_operation:open(FileNameDI),
-    {ok, DMQ}    = ec_storage_data_operation:read(AppConfig, FileDM),
     {ok, DIQ}    = ec_storage_data_operation:read(AppConfig, FileDI),
-    State = #ec_data_state{delta_mutation=DMQ,
-			   delta_interval=DIQ,
+    State = #ec_data_state{delta_interval=DIQ,
 			   file_delta_mutation=FileDM,
 			   file_delta_interval=FileDI,
 			   app_config=AppConfig},
@@ -52,16 +50,18 @@ init([AppConfig]) ->
 
 handle_call({?EC_MSG_READ_DATA, {CrdtSpec, ServerId}},
 	    _From,
-	    #ec_data_state{delta_mutation=DMQ, delta_interval=DIQ}=State) ->
+	    #ec_data_state{file_delta_mutation=FileDM, 
+			   delta_interval=DIQ, 
+			   app_config=AppConfig}=State) ->
+    {ok, DMQ} = ec_storage_data_operation:read(AppConfig, FileDM),
     Data = ec_data_util:get_data(DMQ, DIQ, CrdtSpec, ServerId),
     {reply, Data, State};
 handle_call({?EC_MSG_WRITE_DM, #ec_dvv{}=DM},
             _From,
-            #ec_data_state{delta_mutation=DMQ, 
-			   file_delta_mutation=FileDM, 
+            #ec_data_state{file_delta_mutation=FileDM, 
 			   app_config=AppConfig}=State) ->
     ec_storage_data_operation:write(AppConfig, FileDM, DM),
-    {reply, ok, State#ec_data_state{delta_mutation=queue:in(DM, DMQ)}};
+    {reply, ok, State};
 handle_call({?EC_MSG_WRITE_DI, #ec_dvv{}=DI},
             _From, 
             #ec_data_state{delta_interval=DIQ,
