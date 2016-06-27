@@ -31,7 +31,7 @@ convert_to_milli_seconds({milli_seconds, {Min, Max}}) ->
 
 -spec get_random({Min :: non_neg_integer(), Max :: non_neg_integer()}) -> non_neg_integer().
 get_random({Min, Max}) ->
-    random:uniform(Max-Min)+Min.
+    rand:uniform(Max-Min)+Min.
 
 -spec get_timeout(StartTime :: non_neg_integer(), TimeoutPeriod :: non_neg_integer()) -> non_neg_integer().
 get_timeout(StartTime, TimeoutPeriod) ->

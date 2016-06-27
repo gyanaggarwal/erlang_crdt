@@ -35,7 +35,7 @@ start_link(AppConfig) ->
     gen_server:start_link({local, ?EC_CRDT_SERVER}, ?MODULE, [AppConfig], []).
 
 init([AppConfig]) ->
-    random:seed(erlang:phash2([node()]), erlang:monotonic_time(), erlang:unique_integer()),
+    rand:seed(exs1024),
     NodeId = ec_crdt_config:get_node_id(AppConfig),
     CrdtSpec = ec_crdt_config:get_crdt_spec(AppConfig),
     DataManager = ec_crdt_config:get_data_manager(AppConfig),
