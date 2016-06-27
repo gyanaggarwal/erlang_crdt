@@ -125,12 +125,14 @@ handle_cast({?EC_MSG_MERGE, {SenderNodeId, DeltaList, CausalHistory}},
 			   app_config=AppConfig}=State) ->
     NodeId = ec_crdt_config:get_node_id(AppConfig),
     DataManager = ec_crdt_config:get_data_manager(AppConfig),
+    StorageData = ec_crdt_config:get_storage_data(AppConfig),
     State1 = case DeltaList of
 		 ?EC_NOT_SPECIFIED ->
 		     State;
 		 _                 ->
-		     print_merge(SenderNodeId, get_di_num_list(DeltaList), LastMsg),
-		     StateDvv1 = lists:foldl(fun(DeltaDvvx, StateDvvx) -> merge_fun(SenderNodeId, DeltaDvvx, StateDvvx, DataManager) end, StateDvv, DeltaList),
+		     NewDeltaList = get_data_list(DeltaList, StorageData, []),
+		     print_merge(SenderNodeId, get_di_num_list(NewDeltaList), LastMsg),
+		     StateDvv1 = lists:foldl(fun(DeltaDvvx, StateDvvx) -> merge_fun(SenderNodeId, DeltaDvvx, StateDvvx, DataManager) end, StateDvv, NewDeltaList),
 		     State#ec_crdt_state{state_dvv=StateDvv1, last_msg=?EC_MSG_MERGE}
              end,
     case CausalHistory of
@@ -161,12 +163,13 @@ handle_info(timeout,
 			   app_config=AppConfig}=State) ->
     NodeId = ec_crdt_config:get_node_id(AppConfig),
     DataManager = ec_crdt_config:get_data_manager(AppConfig),
+    StorageData = ec_crdt_config:get_storage_data(AppConfig),
     CausalHistory = ec_gen_crdt:causal_history(StateDvv, NodeId, ?EC_CAUSAL_EXCLUDE_SERVER),
     DeltaInterval1 = case ec_crdt_util:is_dirty(DeltaInterval) of
 			 true  ->
 			     MDeltaInterval = ec_gen_crdt:mutated(DeltaInterval),
 			     DataManager:write_delta_interval(DeltaInterval),
-			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, [MDeltaInterval], get_causal_history(CausalHistory, AppConfig)),
+			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, [StorageData:data_to_binary(MDeltaInterval)], get_causal_history(CausalHistory, AppConfig)),
 			     ec_gen_crdt:reset(DeltaInterval, NodeId);
 			 false ->
 			     ec_crdt_peer_api:merge(ReplicaCluster, NodeId, ?EC_NOT_SPECIFIED, CausalHistory),
@@ -210,6 +213,16 @@ get_causal_history(CausalHistory, AppConfig) ->
 
 get_di_num_list(DIList) ->    
     lists:map(fun(DVV) -> DVV#ec_dvv.di_num end, DIList).
+
+get_data_list([H | T], StorageData, Acc) ->
+    case StorageData:binary_to_data(H) of
+	{ok, Data}            ->
+	    get_data_list(T, StorageData, [Data | Acc]);
+	{error, ?EC_BAD_DATA} ->
+	    lists:reverse(Acc)
+    end;
+get_data_list([], _, Acc) ->
+    lists:reverse(Acc).
 
 print_mutate(Msg, DINum, LastMsg) ->
     case LastMsg =:= ?EC_MSG_MUTATE of

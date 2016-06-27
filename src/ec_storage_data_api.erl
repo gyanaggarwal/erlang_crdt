@@ -22,6 +22,7 @@
 
 -export([header_byte_size/0,
          data_to_binary/1,
+	 binary_to_data/1,
          binary_to_data/2,
          data_header/1]).
 
@@ -45,13 +46,23 @@ data_to_binary(Data) ->
       BinSize:?DATA_BIT_SIZE, 
       Bin:BinSize/binary>>.
 
--spec binary_to_data(Bin1 :: binary(), Bin2 :: binary()) -> {ok, term()} | {error, ?EC_BAD_DATA}.
-binary_to_data(<<Sha:?SHA_BYTE_SIZE/binary, BinSize:?DATA_BIT_SIZE>>, Bin2) ->
-    case compute_hash(BinSize, Bin2) of 
+-spec binary_to_data(Bin :: binary()) -> {ok, term()} | {error, ?EC_BAD_DATA}.
+binary_to_data(<<Sha:?SHA_BYTE_SIZE/binary, BinSize:?DATA_BIT_SIZE, Bin:BinSize/binary>>) ->
+    case compute_hash(BinSize, Bin) of 
 	Sha    -> 
-	    {ok, binary_to_term(Bin2)};
+	    {ok, binary_to_term(Bin)};
 	_Other -> 
 	    {error, ?EC_BAD_DATA}
+    end.
+
+-spec binary_to_data(Bin1 :: binary(), Bin2 :: binary()) -> {ok, term()} | {error, ?EC_BAD_DATA}.
+binary_to_data(<<Sha:?SHA_BYTE_SIZE/binary, BinSize:?DATA_BIT_SIZE>>, Bin2) ->    
+    case compute_hash(BinSize, Bin2) of
+        Sha    ->
+	     
+            {ok, binary_to_term(Bin2)};
+	        _Other -> 
+            {error, ?EC_BAD_DATA}
     end.
 
 -spec data_header(Bin :: binary()) -> non_neg_integer().

@@ -18,15 +18,15 @@
 
 -module(ec_data_util).
 
--export([get_delta_interval/3,
+-export([get_delta_interval/4,
 	 get_data/4,
 	 get_file_name/3]).
 
 -include("erlang_crdt.hrl").
 
--spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{} | ?EC_UNDEFINED, ServerId :: term()) -> list().
-get_delta_interval(Q0, CH, ServerId) ->
-    get_delta_interval(Q0, CH, ServerId, false, []).
+-spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{} | ?EC_UNDEFINED, ServerId :: term(), StorageData :: atom()) -> list().
+get_delta_interval(Q0, CH, ServerId, StorageData) ->
+    get_delta_interval(Q0, CH, ServerId, StorageData, false, []).
 
 -spec get_data(DMQ0 :: queue:queue(), DIQ0 :: queue:queue(), CrdtSpec :: term(), SereverId :: term()) -> {#ec_dvv{}, #ec_dvv{}, #ec_dvv{}}.
 get_data(DMQ0, DIQ0, {Type, Name}, ServerId) ->
@@ -47,27 +47,27 @@ get_file_name(NodeId, DataDir, FileName) ->
 				       
 % private function
 
--spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{} | ?EC_UNDEFINED, ServerId :: term(), Flag :: true | false, Acc :: list()) -> list().
-get_delta_interval(Q0, CH, ServerId, Flag, Acc) -> 
+-spec get_delta_interval(Q0 :: queue:queue(), CH :: #ec_dvv{} | ?EC_UNDEFINED, ServerId :: term(), StorageData :: atom(), Flag :: true | false, Acc :: list()) -> list().
+get_delta_interval(Q0, CH, ServerId, StorageData, Flag, Acc) -> 
     case {queue:out(Q0), Flag} of
 	{{empty, _}, _}                                                             ->
 	    lists:reverse(Acc);
 	{{{value, #ec_dvv{dot_list=[#ec_dot{replica_id=ServerId}]}=DI}, Q1}, true}  ->
-	    get_delta_interval(Q1, CH, ServerId, Flag, add_delta_interval(DI, Acc));
+	    get_delta_interval(Q1, CH, ServerId, StorageData, Flag, add_delta_interval(DI, StorageData, Acc));
 	{{{value, #ec_dvv{dot_list=[#ec_dot{replica_id=ServerId}]}=DI}, Q1}, false} ->
 	    case ec_gen_crdt:causal_consistent(DI, CH, ServerId, ?EC_GLOBAL) of
 		[] ->
-		    get_delta_interval(Q1, CH, ServerId, true, add_delta_interval(DI, Acc));
+		    get_delta_interval(Q1, CH, ServerId, StorageData, true, add_delta_interval(DI, StorageData, Acc));
 		_  ->
-		    get_delta_interval(Q1, CH, ServerId, Flag, Acc)
+		    get_delta_interval(Q1, CH, ServerId, StorageData, Flag, Acc)
             end;
 	{{{value, _}, Q1}, _}                                                       ->
-	    get_delta_interval(Q1, CH, ServerId, Flag, Acc)
+	    get_delta_interval(Q1, CH, ServerId, StorageData, Flag, Acc)
     end.
 
--spec add_delta_interval(DI :: #ec_dvv{}, Acc :: list()) -> list().
-add_delta_interval(#ec_dvv{}=DI, Acc) ->
-    [ec_gen_crdt:mutated(DI) | Acc].
+-spec add_delta_interval(DI :: #ec_dvv{}, StorageData :: atom(), Acc :: list()) -> list().
+add_delta_interval(#ec_dvv{}=DI, StorageData, Acc) ->
+    [StorageData:data_to_binary(ec_gen_crdt:mutated(DI)) | Acc].
 
 -spec get_server_id(DI :: #ec_dvv{}) -> term().
 get_server_id(#ec_dvv{dot_list=[#ec_dot{replica_id=ServerId}]}) -> 

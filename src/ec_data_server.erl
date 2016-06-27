@@ -71,8 +71,10 @@ handle_call({?EC_MSG_WRITE_DI, #ec_dvv{}=DI},
     {reply, ok, State#ec_data_state{delta_interval=queue:in(DI, DIQ)}};
 handle_call({?EC_MSG_READ_DI, {CH, ServerId}},
 	    _From,
-	    #ec_data_state{delta_interval=DIQ}=State) ->
-    {reply, ec_data_util:get_delta_interval(DIQ, CH, ServerId), State}.
+	    #ec_data_state{delta_interval=DIQ,
+			   app_config=AppConfig}=State) ->
+    StorageData = ec_crdt_config:get_storage_data(AppConfig),
+    {reply, ec_data_util:get_delta_interval(DIQ, CH, ServerId, StorageData), State}.
 
 handle_cast({stop, Reason}, 
 	    #ec_data_state{}=State) ->

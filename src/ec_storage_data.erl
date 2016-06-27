@@ -24,6 +24,8 @@
 
 -callback data_to_binary(Data :: term()) -> binary().
 
+-callback binary_to_data(Bin :: binary()) -> {ok, term()} | {error, ?EC_BAD_DATA}.
+
 -callback binary_to_data(Bin1 :: binary(), Bin2 :: binary()) -> {ok, term()} | {error, ?EC_BAD_DATA}.
 
 -callback data_header(Bin :: binary()) -> non_neg_integer().
